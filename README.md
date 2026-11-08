@@ -1,48 +1,50 @@
 # Securify
 
-Android-клиент для прокси с TUN-режимом на ядре [Xray](https://github.com/XTLS/Xray-core), с поддержкой подписок и HWID, в дизайне Material 3 Expressive.
+**English** | [Русский](README_RU.md)
 
-## Возможности
+An Android proxy client with TUN mode, built on the [Xray](https://github.com/XTLS/Xray-core) core. It supports subscriptions with HWID and uses a Material 3 Expressive design.
 
-- **TUN через VpnService.** Весь трафик устройства идёт через Xray: TCP, UDP, IPv4 и IPv6.
-- **Протоколы:** VLESS (Reality, Vision, XHTTP), VMess, Trojan, Shadowsocks (в том числе 2022), Hysteria2.
-- **Транспорты:** RAW/TCP, WebSocket, gRPC, HTTPUpgrade, XHTTP, mKCP. Шифрование TLS или Reality.
-- **Подписки** в base64, обычным списком ссылок или в Xray JSON:
-  - название берётся само из `profile-title`;
-  - панель подписки показывает описание (`announce`), дату окончания и остаток трафика (`subscription-userinfo`), ссылки на поддержку и страницу подписки;
-  - HWID-заголовки в формате Remnawave (`x-hwid`, `x-device-os`, `x-ver-os`, `x-device-model`), отправку можно выключить;
-  - автообновление по `profile-update-interval`.
-- **Импорт** из буфера обмена, по QR-коду или вручную.
-- **Пинг** тремя способами: TCP, ICMP и реальная задержка через прокси. Все сервера пингуются параллельно.
-- **Сортировка** как в подписке, по названию или по пингу. У каждой подписки своя страница.
-- **Маршрутизация:** «весь трафик» или «RU напрямую» (`geosite:category-ru` и `geoip:ru` идут мимо прокси).
-- **Раздельное туннелирование по приложениям:** только выбранные или все, кроме выбранных.
-- **Внешний IP и страна** выхода на главном экране, вместе со скоростью и временем сессии.
-- **Плитка в быстрых настройках** с названием сервера. Долгое нажатие открывает приложение.
-- **Monet:** цвета приложения и иконки берутся из обоев, есть themed-иконка (Android 13+).
-- **Язык:** русский и английский, выбирается по языку системы.
+## Features
 
-## Сборка
+- **TUN via VpnService.** All device traffic goes through Xray: TCP, UDP, IPv4 and IPv6.
+- **Protocols:** VLESS (Reality, Vision, XHTTP), VMess, Trojan, Shadowsocks (including 2022), Hysteria2.
+- **Transports:** RAW/TCP, WebSocket, gRPC, HTTPUpgrade, XHTTP, mKCP. Security is TLS or Reality.
+- **Subscriptions** as base64, a plain list of links, or Xray JSON:
+  - the name is detected from `profile-title`;
+  - the subscription panel shows the description (`announce`), expiry date, remaining traffic (`subscription-userinfo`), and support and subscription page links;
+  - HWID headers in the Remnawave format (`x-hwid`, `x-device-os`, `x-ver-os`, `x-device-model`), which can be turned off;
+  - auto-update on `profile-update-interval`.
+- **Import** from the clipboard, a QR code, or by hand.
+- **Ping** in three ways: TCP, ICMP, and real delay through the proxy. All servers are pinged in parallel.
+- **Sorting** in subscription order, by name, or by ping. Each subscription has its own page.
+- **Routing:** "everything" or "RU direct" (`geosite:category-ru` and `geoip:ru` bypass the proxy).
+- **Per-app split tunneling:** only the selected apps, or all except the selected ones.
+- **Exit IP and country** on the home screen, along with speed and session time.
+- **Quick Settings tile** showing the server name. Long-press opens the app.
+- **Monet:** app and icon colors follow the wallpaper. Themed icon on Android 13+.
+- **Languages:** English and Russian, picked from the system language.
 
-Нужны JDK 21 и Android SDK (compileSdk 37).
+## Building
+
+Requires JDK 21 and the Android SDK (compileSdk 37).
 
 ```sh
 ./gradlew :app:assembleRelease
 ```
 
-APK появятся в `app/build/outputs/apk/release/`: под arm64-v8a, armeabi-v7a, x86_64 и universal.
+The APKs land in `app/build/outputs/apk/release/`: arm64-v8a, armeabi-v7a, x86_64 and universal.
 
-При первой сборке скачивается `libv2ray.aar` из [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite) v26.10.31, сборка проверяет его SHA-256.
+The first build downloads `libv2ray.aar` from [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite) v26.10.31 and checks its SHA-256.
 
-Тесты:
+Tests:
 
 ```sh
 ./gradlew :app:testDebugUnitTest
 ```
 
-### Подпись
+### Signing
 
-Release подписывается ключом из `keystore.properties` в корне проекта (файл в git не попадает):
+Release builds are signed with the key from `keystore.properties` in the project root (the file is not committed to git):
 
 ```properties
 storeFile=release.jks
@@ -51,44 +53,44 @@ keyAlias=securify
 keyPassword=...
 ```
 
-Вместо файла можно задать переменные окружения `SIGNING_STORE_FILE`, `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS` и `SIGNING_KEY_PASSWORD`. Если ключа нет, release подписывается debug-ключом.
+Instead of the file, you can set the environment variables `SIGNING_STORE_FILE`, `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS` and `SIGNING_KEY_PASSWORD`. Without a key, release builds are signed with the debug key.
 
-## Релизы
+## Releases
 
-Тег вида `v*` запускает `.github/workflows/release.yml`. Workflow прогоняет тесты, собирает подписанные APK и публикует их в GitHub Release вместе с `SHA256SUMS`:
+A tag matching `v*` triggers `.github/workflows/release.yml`. The workflow runs the tests, builds signed APKs and publishes them to a GitHub Release along with `SHA256SUMS`:
 
 ```sh
 git tag v1.0.1 && git push origin v1.0.1
 ```
 
-При ручном запуске (workflow_dispatch) APK сохраняются как артефакт сборки.
+A manual run (workflow_dispatch) uploads the APKs as a build artifact instead.
 
-Нужные секреты репозитория:
+Required repository secrets:
 
-| Секрет | Значение |
+| Secret | Value |
 |---|---|
 | `KEYSTORE_BASE64` | `base64 -w0 release.jks` |
-| `SIGNING_STORE_PASSWORD` | пароль хранилища |
+| `SIGNING_STORE_PASSWORD` | keystore password |
 | `SIGNING_KEY_ALIAS` | `securify` |
-| `SIGNING_KEY_PASSWORD` | пароль ключа |
+| `SIGNING_KEY_PASSWORD` | key password |
 
-`versionCode` берётся из номера запуска workflow, `versionName` из тега.
+`versionCode` comes from the workflow run number and `versionName` from the tag.
 
-## Как устроено
+## How it works
 
-- `core/`: парсер ссылок и подписок, сборка конфига Xray, хранилище, пинг.
-- `vpn/SecurifyVpn`: поднимает TUN и передаёт его fd в Xray (`CoreController.startLoop`). Само приложение исключено из VPN, иначе исходящий трафик Xray зациклится.
-- Внешний IP определяется запросом к ip-api.com через отдельный HTTP-инбаунд Xray. Инбаунд слушает unix-сокет в приватной папке приложения, поэтому сторонние приложения не могут им воспользоваться.
-- `ui/`: Jetpack Compose и Material 3 Expressive.
+- `core/`: link and subscription parsing, Xray config building, storage, ping.
+- `vpn/SecurifyVpn`: brings up the TUN interface and hands its fd to Xray (`CoreController.startLoop`). The app itself is excluded from the VPN, otherwise Xray's outbound traffic would loop back into the tunnel.
+- The exit IP is looked up from ip-api.com through a separate Xray HTTP inbound. That inbound listens on a unix socket in the app's private directory, so other apps can't use it.
+- `ui/`: Jetpack Compose with Material 3 Expressive.
 
-## Ограничения
+## Limitations
 
-- В Hysteria2 используется первый порт из диапазона (port hopping не поддерживается).
-- Shadowsocks с плагинами (obfs, v2ray-plugin) не поддерживается.
-- Подписки скачиваются в обход VPN.
-- Запрос к ip-api.com идёт по HTTP, без шифрования.
+- Hysteria2 uses the first port of a range (port hopping is not supported).
+- Shadowsocks plugins (obfs, v2ray-plugin) are not supported.
+- Subscriptions are downloaded outside the VPN.
+- The ip-api.com request goes over plain HTTP, without encryption.
 
-## Лицензии сторонних компонентов
+## Third-party licenses
 
 - [Xray-core](https://github.com/XTLS/Xray-core): MPL-2.0.
 - [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite): LGPL-3.0.
