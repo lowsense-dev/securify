@@ -26,7 +26,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.min
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -82,64 +91,100 @@ import kotlinx.coroutines.delay
 @Composable
 fun HomeScreen(modifier: Modifier, onToggle: () -> Unit, onServers: () -> Unit) {
     val vpn by SecurifyVpn.state.collectAsState()
+
+    BoxWithConstraints(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 20.dp)) {
+        val height = maxHeight
+        if (maxWidth > maxHeight) {
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    ConnectButton(vpn, onToggle, size = min(248.dp, height - 48.dp))
+                }
+                Column(
+                    Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Title()
+                    Spacer(Modifier.height(16.dp))
+                    Status(vpn)
+                    Connection(vpn)
+                    Spacer(Modifier.height(20.dp))
+                    ServerCard(onServers)
+                }
+            }
+        } else {
+            Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Title(Modifier.padding(top = 20.dp))
+                Spacer(Modifier.weight(1f))
+                ConnectButton(vpn, onToggle)
+                Spacer(Modifier.height(36.dp))
+                Status(vpn)
+                Connection(vpn)
+                Spacer(Modifier.weight(1f))
+                ServerCard(onServers)
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun Title(modifier: Modifier = Modifier) {
+    Text(
+        stringResource(R.string.app_name),
+        style = MaterialTheme.typography.headlineMediumEmphasized,
+        modifier = modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+private fun Connection(vpn: VpnState) {
     val traffic by SecurifyVpn.traffic.collectAsState()
+    val exit by SecurifyVpn.exit.collectAsState()
+    AnimatedVisibility(vpn is VpnState.On) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            TrafficPill(traffic)
+            Text(
+                exit ?: stringResource(R.string.exit_detecting),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 10.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ServerCard(onClick: () -> Unit) {
     val app by Store.state.collectAsState()
     val pings by Store.pings.collectAsState()
     val server = app.selected
-
-    Column(
-        modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth().widthIn(max = 560.dp),
     ) {
-        Text(
-            stringResource(R.string.app_name),
-            style = MaterialTheme.typography.headlineMediumEmphasized,
-            modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
-        )
-        Spacer(Modifier.weight(1f))
-        ConnectButton(vpn, onToggle)
-        Spacer(Modifier.height(36.dp))
-        Status(vpn)
-        val exit by SecurifyVpn.exit.collectAsState()
-        AnimatedVisibility(vpn is VpnState.On) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                TrafficPill(traffic)
-                Text(
-                    exit ?: stringResource(R.string.exit_detecting),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 10.dp),
-                )
-            }
-        }
-        Spacer(Modifier.weight(1f))
-        Surface(
-            onClick = onServers,
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (server == null) {
-                    Icon(Icons.Filled.Add, null, Modifier.padding(horizontal = 10.dp))
-                    Text(stringResource(R.string.add_first_sub), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                } else {
-                    ProtocolBadge(server.protocol)
-                    Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
-                        Text(server.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            app.subs.firstOrNull { s -> s.servers.any { it.key == server.key } }?.let { subTitle(it) }.orEmpty(),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    PingLabel(pings[server.key])
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (server == null) {
+                Icon(Icons.Filled.Add, null, Modifier.padding(horizontal = 10.dp))
+                Text(stringResource(R.string.add_first_sub), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            } else {
+                ProtocolBadge(server.protocol)
+                Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
+                    Text(server.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        app.subs.firstOrNull { s -> s.servers.any { it.key == server.key } }?.let { subTitle(it) }.orEmpty(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
                 }
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                PingLabel(pings[server.key])
             }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Spacer(Modifier.height(16.dp))
     }
 }
 
@@ -153,7 +198,7 @@ private class MorphShape(private val morph: Morph, private val progress: Float) 
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ConnectButton(state: VpnState, onClick: () -> Unit) {
+private fun ConnectButton(state: VpnState, onClick: () -> Unit, size: Dp = 248.dp) {
     val on = state is VpnState.On
     val busy = state is VpnState.Connecting
     val c = MaterialTheme.colorScheme
@@ -175,7 +220,7 @@ private fun ConnectButton(state: VpnState, onClick: () -> Unit) {
     val scale by animateFloatAsState(if (pressed) 0.9f else 1f, motion.fastSpatialSpec())
     val label = stringResource(if (on || busy) R.string.action_disconnect else R.string.action_connect)
 
-    Box(Modifier.size(248.dp).graphicsLayer { scaleX = scale; scaleY = scale }, contentAlignment = Alignment.Center) {
+    Box(Modifier.size(size).graphicsLayer { scaleX = scale; scaleY = scale }, contentAlignment = Alignment.Center) {
         Box(
             Modifier
                 .matchParentSize()
@@ -189,8 +234,8 @@ private fun ConnectButton(state: VpnState, onClick: () -> Unit) {
                 .semantics { role = Role.Button; contentDescription = label },
         )
         AnimatedContent(busy, transitionSpec = { (fadeIn() + scaleIn()) togetherWith (fadeOut() + scaleOut()) }) { b ->
-            if (b) LoadingIndicator(Modifier.size(96.dp), color = content)
-            else Icon(painterResource(R.drawable.ic_shield), null, Modifier.size(96.dp), tint = content)
+            if (b) LoadingIndicator(Modifier.size(size * 0.39f), color = content)
+            else Icon(painterResource(R.drawable.ic_shield), null, Modifier.size(size * 0.39f), tint = content)
         }
     }
 }

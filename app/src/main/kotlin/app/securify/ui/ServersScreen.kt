@@ -52,7 +52,6 @@ import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
@@ -144,6 +143,7 @@ fun ServersScreen(modifier: Modifier) {
     val page = subs.getOrNull(pager.currentPage)
     val list = page?.let { sortServers(it.servers, app.prefs.sort, pings) }.orEmpty()
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val landscape = isLandscape()
 
     fun import(text: String?) {
         if (text.isNullOrBlank()) return
@@ -183,10 +183,10 @@ fun ServersScreen(modifier: Modifier) {
         modifier.nestedScroll(scroll.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snack) },
         topBar = {
-            LargeFlexibleTopAppBar(
-                title = { Text(stringResource(R.string.tab_servers)) },
-                subtitle = { Text(pluralStringResource(R.plurals.servers, list.size, list.size)) },
-                scrollBehavior = scroll,
+            ScreenTopBar(
+                title = stringResource(R.string.tab_servers),
+                subtitle = pluralStringResource(R.plurals.servers, list.size, list.size),
+                scroll = scroll,
                 actions = {
                     Box {
                         IconButton(onClick = { sortMenu = true }) { Icon(Icons.AutoMirrored.Filled.Sort, stringResource(R.string.sort)) }
@@ -261,7 +261,7 @@ fun ServersScreen(modifier: Modifier) {
                     modifier = Modifier.fillMaxSize(),
                     indicator = { PullToRefreshDefaults.LoadingIndicator(state = pull, isRefreshing = pulling, modifier = Modifier.align(Alignment.TopCenter)) },
                 ) {
-                    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp)) {
+                    LazyColumn(Modifier.centeredContent(), contentPadding = PaddingValues(start = 16.dp, end = if (landscape) 104.dp else 16.dp, bottom = 120.dp)) {
                         item(key = "sub:" + sub.id) {
                             SubPanel(
                                 sub,

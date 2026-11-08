@@ -12,7 +12,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -56,9 +55,9 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit) {
 
     Scaffold(
         modifier.nestedScroll(scroll.nestedScrollConnection),
-        topBar = { LargeFlexibleTopAppBar(title = { Text(stringResource(R.string.tab_settings)) }, scrollBehavior = scroll) },
+        topBar = { ScreenTopBar(stringResource(R.string.tab_settings), scroll) },
     ) { pad ->
-        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), modifier = Modifier.padding(pad)) {
+        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), modifier = Modifier.padding(pad).centeredContent()) {
             item { Header(R.string.sec_routing) }
             item {
                 Item(first = true, title = stringResource(R.string.routing), summary = stringResource(R.string.routing_hint)) {

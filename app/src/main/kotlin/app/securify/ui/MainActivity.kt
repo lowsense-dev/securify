@@ -2,6 +2,18 @@ package app.securify.ui
 
 import android.Manifest
 import android.content.Context
+import android.content.res.Configuration
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.ui.platform.LocalConfiguration
 import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Build
@@ -28,6 +40,7 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
@@ -51,6 +64,9 @@ class MainActivity : ComponentActivity() {
         setContent { SecurifyTheme { SecurifyApp() } }
     }
 }
+
+@Composable
+fun isLandscape() = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
 fun Context.bytes(b: Long): String = Formatter.formatShortFileSize(this, b)
 
@@ -93,27 +109,47 @@ fun SecurifyApp() {
         return
     }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0),
-        bottomBar = {
-            ShortNavigationBar {
-                tabs.forEachIndexed { i, t ->
-                    ShortNavigationBarItem(
-                        selected = pager.targetPage == i,
-                        onClick = { go(i) },
-                        icon = { Icon(if (pager.targetPage == i) t.on else t.off, null) },
-                        label = { Text(stringResource(t.label)) },
-                    )
-                }
-            }
-        },
-    ) { pad ->
-        HorizontalPager(pager, Modifier.padding(pad).consumeWindowInsets(pad)) { i ->
+    val pages = @Composable { m: Modifier ->
+        HorizontalPager(pager, m) { i ->
             when (i) {
                 0 -> HomeScreen(Modifier, onToggle = toggle, onServers = { go(1) })
                 1 -> ServersScreen(Modifier)
                 else -> SettingsScreen(Modifier, onApps = { appsOpen = true })
             }
         }
+    }
+
+    if (isLandscape()) {
+        Surface(color = MaterialTheme.colorScheme.surface) { Row(Modifier.fillMaxSize()) {
+            NavigationRail(Modifier.fillMaxHeight(), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                Spacer(Modifier.weight(1f))
+                tabs.forEachIndexed { i, t ->
+                    NavigationRailItem(
+                        selected = pager.targetPage == i,
+                        onClick = { go(i) },
+                        icon = { Icon(if (pager.targetPage == i) t.on else t.off, null) },
+                        label = { Text(stringResource(t.label)) },
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+            }
+            pages(Modifier.weight(1f).consumeWindowInsets(WindowInsets.safeDrawing.only(WindowInsetsSides.Start)))
+        } }
+    } else {
+        Scaffold(
+            contentWindowInsets = WindowInsets(0),
+            bottomBar = {
+                ShortNavigationBar {
+                    tabs.forEachIndexed { i, t ->
+                        ShortNavigationBarItem(
+                            selected = pager.targetPage == i,
+                            onClick = { go(i) },
+                            icon = { Icon(if (pager.targetPage == i) t.on else t.off, null) },
+                            label = { Text(stringResource(t.label)) },
+                        )
+                    }
+                }
+            },
+        ) { pad -> pages(Modifier.padding(pad).consumeWindowInsets(pad)) }
     }
 }

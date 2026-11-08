@@ -80,7 +80,7 @@ fun AppsScreen(onBack: () -> Unit) {
             )
         },
     ) { pad ->
-        Column(Modifier.padding(pad).padding(horizontal = 16.dp)) {
+        Column(Modifier.padding(pad).centeredContent().padding(horizontal = 16.dp)) {
             Choice(
                 listOf(stringResource(R.string.apps_mode_off), stringResource(R.string.apps_mode_only), stringResource(R.string.apps_mode_bypass)),
                 p.appMode.ordinal,

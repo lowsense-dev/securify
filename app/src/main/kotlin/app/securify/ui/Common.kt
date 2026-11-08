@@ -9,6 +9,14 @@ import android.os.Build
 import android.os.PersistableBundle
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -76,6 +84,25 @@ fun PingLabel(ms: Long?) {
 
 @Composable
 fun subTitle(sub: Sub) = if (sub.id == MANUAL_ID) stringResource(R.string.manual_group) else sub.name
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun ScreenTopBar(
+    title: String,
+    scroll: TopAppBarScrollBehavior,
+    subtitle: String? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
+    when {
+        !isLandscape() -> LargeFlexibleTopAppBar(
+            title = { Text(title) }, subtitle = subtitle?.let { { Text(it) } }, actions = actions, scrollBehavior = scroll,
+        )
+        subtitle != null -> TopAppBar(title = { Text(title) }, subtitle = { Text(subtitle) }, actions = actions, scrollBehavior = scroll)
+        else -> TopAppBar(title = { Text(title) }, actions = actions, scrollBehavior = scroll)
+    }
+}
+
+fun Modifier.centeredContent() = fillMaxSize().wrapContentWidth().widthIn(max = 720.dp)
 
 fun copyText(ctx: Context, label: String, text: String, sensitive: Boolean = false) {
     val clip = ClipData.newPlainText(label, text)
