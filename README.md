@@ -29,6 +29,7 @@ An Android proxy client with TUN mode, built on the [Xray](https://github.com/XT
 - **Quick Settings tile** showing the server name. Long-press opens the app.
 - **Launcher shortcuts** to connect and disconnect, and support for the system "Always-on VPN".
 - **Xray log** viewer with sharing.
+- **In-app updates** from GitHub Releases: the APK for your ABI is checked against `SHA256SUMS` and installed through the system installer. The check runs only when you tap it, since the app's own traffic bypasses the VPN.
 - **Monet:** app and icon colors follow the wallpaper. Themed icon on Android 13+.
 - **Languages:** English and Russian, picked from the system language.
 

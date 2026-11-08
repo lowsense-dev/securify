@@ -139,4 +139,12 @@
     <string name="logs_empty">Журнал пуст</string>
     <string name="apps_user">Пользовательские</string>
     <string name="apps_system">Системные</string>
+    <string name="update">Обновления</string>
+    <string name="update_check">Проверить новую версию на GitHub</string>
+    <string name="update_checking">Проверяю…</string>
+    <string name="update_latest">Установлена последняя версия</string>
+    <string name="update_available">Доступна версия %s, нажмите, чтобы установить</string>
+    <string name="update_downloading">Скачиваю %1$s… %2$d%%</string>
+    <string name="update_failed">Не удалось обновиться: %s</string>
+    <string name="update_allow">Разрешите Securify устанавливать приложения и нажмите ещё раз</string>
 </resources>

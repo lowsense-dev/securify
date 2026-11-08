@@ -49,6 +49,10 @@ import app.securify.core.AppMode
 import app.securify.core.Geo
 import app.securify.core.GeoSource
 import app.securify.core.SubAgent
+import app.securify.core.UpdateState
+import app.securify.core.Updater
+import android.net.Uri
+import androidx.compose.material3.LinearWavyProgressIndicator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -213,6 +217,7 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit, onRules: () -> Unit, 
 
             item { Header(R.string.sec_about) }
             item { Item(first = true, title = "Securify ${BuildConfig.VERSION_NAME}", summary = xray) }
+            item { UpdateItem() }
             item {
                 Item(
                     last = true, title = stringResource(R.string.logs), summary = stringResource(R.string.logs_hint), onClick = onLogs,
@@ -241,6 +246,42 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit, onRules: () -> Unit, 
             },
             dismissButton = { TextButton(onClick = { editUrl = false }) { Text(stringResource(R.string.cancel)) } },
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun UpdateItem() {
+    val ctx = LocalContext.current
+    val u by Updater.state.collectAsState()
+    Item(
+        title = stringResource(R.string.update),
+        summary = when (val s = u) {
+            UpdateState.Idle -> stringResource(R.string.update_check)
+            UpdateState.Checking -> stringResource(R.string.update_checking)
+            UpdateState.Latest -> stringResource(R.string.update_latest)
+            is UpdateState.Available -> stringResource(R.string.update_available, s.release.version)
+            is UpdateState.Downloading -> stringResource(R.string.update_downloading, s.release.version, s.percent)
+            is UpdateState.Failed -> stringResource(R.string.update_failed, s.message)
+        },
+        onClick = {
+            when (val s = u) {
+                is UpdateState.Available -> if (ctx.packageManager.canRequestPackageInstalls()) Updater.install(ctx.applicationContext, s.release)
+                else {
+                    Toast.makeText(ctx, R.string.update_allow, Toast.LENGTH_LONG).show()
+                    runCatching {
+                        ctx.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${ctx.packageName}")))
+                    }
+                }
+                is UpdateState.Downloading, UpdateState.Checking -> {}
+                else -> Updater.check()
+            }
+        },
+        trailing = { if (u is UpdateState.Checking) LoadingIndicator(Modifier.size(40.dp)) },
+    ) {
+        (u as? UpdateState.Downloading)?.let { d ->
+            LinearWavyProgressIndicator(progress = { d.percent / 100f }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
+        }
     }
 }
 

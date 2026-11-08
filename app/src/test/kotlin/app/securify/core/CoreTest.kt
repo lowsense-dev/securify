@@ -303,4 +303,17 @@ class CoreTest {
         assertTrue(c.getJSONArray("inbounds").getJSONObject(0).getJSONObject("sniffing").getJSONArray("destOverride").toString().contains("fakedns"))
         assertEquals("1.1.1.1", JSONObject(buildConfig(s, Prefs(fakeDns = true))).getJSONObject("dns").getJSONArray("servers").getString(1))
     }
+
+    @Test fun updateAssets() {
+        assertEquals(10400, tagVersionCode("v1.4.0"))
+        assertEquals(21203, tagVersionCode("2.12.3"))
+        assertNull(tagVersionCode("v1.4.0-beta"))
+        val names = listOf("securify-1.5.0-arm64-v8a.apk", "securify-1.5.0-armeabi-v7a.apk", "securify-1.5.0-universal.apk", "SHA256SUMS")
+        assertEquals("securify-1.5.0-arm64-v8a.apk", pickApk(names, listOf("arm64-v8a", "armeabi-v7a")))
+        assertEquals("securify-1.5.0-universal.apk", pickApk(names, listOf("riscv64")))
+        val sums = "AB12  securify-1.5.0-arm64-v8a.apk\ncd34 *securify-1.5.0-universal.apk\n"
+        assertEquals("ab12", sha256From(sums, "securify-1.5.0-arm64-v8a.apk"))
+        assertEquals("cd34", sha256From(sums, "securify-1.5.0-universal.apk"))
+        assertNull(sha256From(sums, "securify-1.5.0-x86_64.apk"))
+    }
 }
