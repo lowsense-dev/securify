@@ -175,7 +175,8 @@ private fun ServerCard(onClick: () -> Unit) {
                 Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                     Text(server.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        app.subs.firstOrNull { s -> s.servers.any { it.key == server.key } }?.let { subTitle(it) }.orEmpty(),
+                        if (server.group.isNotEmpty()) stringResource(R.string.auto_hint, server.group.size)
+                        else app.subs.firstOrNull { s -> s.servers.any { it.key == server.key } }?.let { subTitle(it) }.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,

@@ -42,6 +42,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.securify.R
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.journeyapps.barcodescanner.BarcodeEncoder
 import app.securify.core.MANUAL_ID
 import app.securify.core.PING_PENDING
 import app.securify.core.Sub
@@ -61,11 +75,9 @@ fun ProtocolBadge(protocol: String, selected: Boolean = false) {
             .background(if (selected) c.primary else c.tertiaryContainer),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            protocolLabel(protocol).take(2).uppercase(),
-            style = MaterialTheme.typography.labelLarge,
-            color = if (selected) c.onPrimary else c.onTertiaryContainer,
-        )
+        val color = if (selected) c.onPrimary else c.onTertiaryContainer
+        if (protocol == "auto") Icon(Icons.Filled.Bolt, null, tint = color)
+        else Text(protocolLabel(protocol).take(2).uppercase(), style = MaterialTheme.typography.labelLarge, color = color)
     }
 }
 
@@ -137,4 +149,26 @@ fun Choice(options: List<String>, selected: Int, modifier: Modifier = Modifier, 
             ) { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
     }
+}
+
+@Composable
+fun QrDialog(title: String, text: String, onDismiss: () -> Unit) {
+    val qr = remember(text) {
+        runCatching {
+            BarcodeEncoder().encodeBitmap(text, BarcodeFormat.QR_CODE, 900, 900,
+                mapOf(EncodeHintType.CHARACTER_SET to "UTF-8", EncodeHintType.MARGIN to 1)).asImageBitmap()
+        }.getOrNull()
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        text = {
+            if (qr == null) Text(stringResource(R.string.qr_too_long))
+            else Image(
+                qr, null,
+                Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(20.dp)).background(Color.White).padding(12.dp),
+            )
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } },
+    )
 }

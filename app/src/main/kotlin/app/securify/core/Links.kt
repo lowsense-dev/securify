@@ -17,8 +17,10 @@ class Server(
     val config: JSONObject? = null,
     /** insecure=1 without a certificate pin: Xray 26 removed allowInsecure, so this can't connect. */
     val needsPin: Boolean = false,
+    /** Servers an "Auto" entry balances between; empty for a regular server. */
+    val group: List<Server> = emptyList(),
 ) {
-    val isUdp get() = protocol == "hysteria"
+    val isUdp get() = protocol == "hysteria" || protocol == "wireguard"
 }
 
 fun b64(s: String): String {
@@ -34,7 +36,7 @@ fun parseEntry(raw: String): Server? = runCatching {
     if (s.startsWith("{")) parseJsonConfig(s) else parseLink(s)
 }.getOrNull()
 
-private class Parts(val user: String, val host: String, val port: Int, val q: Map<String, String>, val name: String)
+private class Parts(val user: String, val host: String, val port: Int, val q: Map<String, String>, val name: String, val ports: String = "")
 
 private fun split(rest0: String): Parts {
     var rest = rest0
@@ -57,7 +59,7 @@ private fun split(rest0: String): Parts {
         .associate { pct(it.substringBefore('=')) to pct(it.substringAfter('=', "")) }
     val p = port.substringBefore(',').substringBefore('-').toInt()
     require(host.isNotEmpty() && p in 1..65535)
-    return Parts(user, host, p, q, name)
+    return Parts(user, host, p, q, name, port)
 }
 
 private fun parseLink(s: String): Server? {
@@ -79,6 +81,7 @@ private fun parseLink(s: String): Server? {
         "vmess" -> vmess(s, rest)
         "ss" -> shadowsocks(s, rest)
         "hy2", "hysteria2" -> hysteria2(s, rest)
+        "wireguard", "wg" -> wireguard(s, rest)
         else -> null
     }
 }
@@ -201,8 +204,16 @@ private fun hysteria2(raw: String, rest: String): Server {
     q["pinSHA256"]?.takeIf { it.isNotEmpty() }?.let { tls.put("pinnedPeerCertSha256", it.replace(":", "")) }
     val stream = JSONObject().put("network", "hysteria").put("security", "tls").put("tlsSettings", tls)
         .put("hysteriaSettings", JSONObject().put("version", 2).put("auth", p.user))
-    if (q["obfs"] == "salamander") stream.put("finalmask", JSONObject().put("udp", JSONArray().put(
-        JSONObject().put("type", "salamander").put("settings", JSONObject().put("password", q["obfs-password"].orEmpty())))))
+    val masks = JSONArray()
+    if (q["obfs"] == "salamander") masks.put(
+        JSONObject().put("type", "salamander").put("settings", JSONObject().put("password", q["obfs-password"].orEmpty())))
+    val hop = q["mport"]?.ifEmpty { null } ?: p.ports.takeIf { ',' in it || '-' in it }
+    if (hop != null) {
+        val interval = (q["hopInterval"] ?: q["hop-interval"])?.filter { it.isDigit() }?.toIntOrNull()?.coerceAtLeast(5) ?: 30
+        masks.put(JSONObject().put("type", "udphop").put("settings", JSONObject()
+            .put("mode", "intervallocal,intervalremote").put("interval", "$interval").put("remotePorts", hop)))
+    }
+    if (masks.length() > 0) stream.put("finalmask", JSONObject().put("udp", masks))
     val ob = JSONObject().put("tag", "proxy").put("protocol", "hysteria")
         .put("settings", JSONObject().put("version", 2).put("address", p.host).put("port", p.port))
         .put("streamSettings", stream)
@@ -210,6 +221,28 @@ private fun hysteria2(raw: String, rest: String): Server {
         raw, p.name.ifEmpty { "${p.host}:${p.port}" }, "hysteria", p.host, p.port, "quic", "tls", ob,
         needsPin = needsPin(q, q["pinSHA256"]),
     )
+}
+
+private fun wireguard(raw: String, rest: String): Server {
+    val p = split(rest)
+    val q = p.q
+    require(p.user.isNotEmpty())
+    val peer = JSONObject()
+        .put("publicKey", requireNotNull((q["publickey"] ?: q["publicKey"] ?: q["public_key"])?.ifEmpty { null }))
+        .put("endpoint", if (':' in p.host) "[${p.host}]:${p.port}" else "${p.host}:${p.port}")
+    (q["presharedkey"] ?: q["preSharedKey"])?.takeIf { it.isNotEmpty() }?.let { peer.put("preSharedKey", it) }
+    q["keepalive"]?.toIntOrNull()?.let { peer.put("keepAlive", it) }
+    val settings = JSONObject()
+        .put("secretKey", p.user)
+        .put("address", JSONArray((q["address"] ?: q["ip"]).orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }
+            .ifEmpty { listOf("172.16.0.2/32") }))
+        .put("peers", JSONArray().put(peer))
+        .put("mtu", q["mtu"]?.toIntOrNull() ?: 1420)
+        .put("noKernelTun", true)
+    q["reserved"]?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.takeIf { it.size == 3 }
+        ?.let { settings.put("reserved", JSONArray(it)) }
+    val ob = JSONObject().put("tag", "proxy").put("protocol", "wireguard").put("settings", settings)
+    return Server(raw, p.name.ifEmpty { "${p.host}:${p.port}" }, "wireguard", p.host, p.port, "udp", "none", ob)
 }
 
 private val notProxy = setOf("freedom", "blackhole", "dns", "loopback")

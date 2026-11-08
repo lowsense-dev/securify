@@ -85,7 +85,7 @@ fun SecurifyApp() {
     val pager = rememberPagerState { tabs.size }
     val scope = rememberCoroutineScope()
     val go = { i: Int -> scope.launch { pager.animateScrollToPage(i) }; Unit }
-    var appsOpen by rememberSaveable { mutableStateOf(false) }
+    var overlay by rememberSaveable { mutableStateOf<String?>(null) }
 
     val vpnPermission = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         if (VpnService.prepare(ctx) == null) SecurifyVpn.start(ctx)
@@ -102,10 +102,13 @@ fun SecurifyApp() {
         }
     }
 
-    if (appsOpen) {
-        val close = { appsOpen = false; SecurifyVpn.restartIfOn(ctx) }
-        BackHandler(onBack = close)
-        AppsScreen(onBack = close)
+    overlay?.let { o ->
+        val close = { overlay = null; if (o != "logs") SecurifyVpn.restartIfOn(ctx) }
+        when (o) {
+            "rules" -> RulesScreen(onBack = close)
+            "logs" -> { BackHandler(onBack = close); LogsScreen(onBack = close) }
+            else -> { BackHandler(onBack = close); AppsScreen(onBack = close) }
+        }
         return
     }
 
@@ -114,7 +117,7 @@ fun SecurifyApp() {
             when (i) {
                 0 -> HomeScreen(Modifier, onToggle = toggle, onServers = { go(1) })
                 1 -> ServersScreen(Modifier)
-                else -> SettingsScreen(Modifier, onApps = { appsOpen = true })
+                else -> SettingsScreen(Modifier, onApps = { overlay = "apps" }, onRules = { overlay = "rules" }, onLogs = { overlay = "logs" })
             }
         }
     }

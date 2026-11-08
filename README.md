@@ -7,20 +7,28 @@ An Android proxy client with TUN mode, built on the [Xray](https://github.com/XT
 ## Features
 
 - **TUN via VpnService.** All device traffic goes through Xray: TCP, UDP, IPv4 and IPv6.
-- **Protocols:** VLESS (Reality, Vision, XHTTP), VMess, Trojan, Shadowsocks (including 2022), Hysteria2.
+- **Protocols:** VLESS (Reality, Vision, XHTTP), VMess, Trojan, Shadowsocks (including 2022), Hysteria2 (with port hopping), WireGuard.
 - **Transports:** RAW/TCP, WebSocket, gRPC, HTTPUpgrade, XHTTP, mKCP. Security is TLS or Reality.
 - **Subscriptions** as base64, a plain list of links, or Xray JSON:
   - the name is detected from `profile-title`;
   - the subscription panel shows the description (`announce`), expiry date, remaining traffic (`subscription-userinfo`), and support and subscription page links;
   - HWID headers in the Remnawave format (`x-hwid`, `x-device-os`, `x-ver-os`, `x-device-model`), which can be turned off;
-  - auto-update on `profile-update-interval`.
-- **Import** from the clipboard, a QR code, or by hand.
+  - auto-update on `profile-update-interval`;
+  - User-Agent preset: Securify, v2rayNG or Happ, for panels that serve each client differently.
+- **Auto:** each subscription has an entry that picks the fastest server and switches over when it fails (Xray balancer `leastPing` with the observatory).
+- **Import** from the clipboard, a QR code, or by hand. **Export** of subscription and server links as text or a QR code.
 - **Ping** in three ways: TCP, ICMP, and real delay through the proxy. All servers are pinged in parallel.
 - **Sorting** in subscription order, by name, or by ping. Each subscription has its own page.
 - **Routing:** "everything" or "RU direct" (`geosite:category-ru` and `geoip:ru` bypass the proxy).
-- **Per-app split tunneling:** only the selected apps, or all except the selected ones.
+- **Custom rules:** domains, IPs, `geosite:` and `geoip:` lists sent through the proxy, direct or blocked.
+- **Geo files** built in, or downloaded from [Loyalsoldier](https://github.com/Loyalsoldier/v2ray-rules-dat) or [runetfreedom](https://github.com/runetfreedom/russia-v2ray-rules-dat) with a SHA-256 check.
+- **Anti-DPI:** TLS ClientHello fragmentation and UDP noise (Xray finalmask).
+- **DNS:** your own DoH/DoT server and FakeDNS; apps' port 53 queries are handled by Xray.
+- **Per-app split tunneling:** only the selected apps, or all except the selected ones, with user and system app filters.
 - **Exit IP and country** on the home screen, along with speed and session time.
 - **Quick Settings tile** showing the server name. Long-press opens the app.
+- **Launcher shortcuts** to connect and disconnect, and support for the system "Always-on VPN".
+- **Xray log** viewer with sharing.
 - **Monet:** app and icon colors follow the wallpaper. Themed icon on Android 13+.
 - **Languages:** English and Russian, picked from the system language.
 
@@ -85,7 +93,7 @@ Required repository secrets:
 
 ## Limitations
 
-- Hysteria2 uses the first port of a range (port hopping is not supported).
+- Custom rules, DNS and anti-DPI don't apply to Xray JSON subscriptions, which keep their own config. JSON servers are also left out of Auto.
 - Shadowsocks plugins (obfs, v2ray-plugin) are not supported.
 - Subscriptions are downloaded outside the VPN.
 - The ip-api.com request goes over plain HTTP, without encryption.

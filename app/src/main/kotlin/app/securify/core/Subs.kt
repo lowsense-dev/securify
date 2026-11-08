@@ -61,7 +61,11 @@ object Subs {
         try {
             c.connectTimeout = 15_000
             c.readTimeout = 20_000
-            c.setRequestProperty("User-Agent", "Securify/${BuildConfig.VERSION_NAME}")
+            c.setRequestProperty("User-Agent", when (Store.state.value.prefs.agent) {
+                SubAgent.SECURIFY -> "Securify/${BuildConfig.VERSION_NAME}"
+                SubAgent.V2RAYNG -> "v2rayNG/1.10.24"
+                SubAgent.HAPP -> "Happ/3.2.1"
+            })
             c.setRequestProperty("Accept", "*/*")
             if (Store.state.value.prefs.hwid) {
                 c.setRequestProperty("x-hwid", hwid(ctx, url))

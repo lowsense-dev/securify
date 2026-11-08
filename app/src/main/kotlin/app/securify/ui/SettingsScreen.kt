@@ -35,7 +35,25 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.securify.BuildConfig
 import app.securify.R
+import android.content.Intent
+import android.provider.Settings
+import android.text.format.DateUtils
+import android.widget.Toast
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.runtime.rememberCoroutineScope
 import app.securify.core.AppMode
+import app.securify.core.Geo
+import app.securify.core.GeoSource
+import app.securify.core.SubAgent
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import app.securify.core.PingMethod
 import app.securify.core.Store
 import app.securify.core.SubUpdateJob
@@ -44,11 +62,26 @@ import libv2ray.Libv2ray
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun SettingsScreen(modifier: Modifier, onApps: () -> Unit) {
+fun SettingsScreen(modifier: Modifier, onApps: () -> Unit, onRules: () -> Unit, onLogs: () -> Unit) {
     val ctx = LocalContext.current
     val p = Store.state.collectAsState().value.prefs
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scope = rememberCoroutineScope()
     var editUrl by rememberSaveable { mutableStateOf(false) }
+    var editDns by rememberSaveable { mutableStateOf(false) }
+    var geoBusy by remember { mutableStateOf(false) }
+    val restart = { SecurifyVpn.restartIfOn(ctx) }
+    fun updateGeo(src: GeoSource) {
+        if (geoBusy) return
+        geoBusy = true
+        scope.launch {
+            // finishes even if the screen goes away, so the files on disk and the saved source stay in sync
+            runCatching { withContext(Dispatchers.IO + NonCancellable) { Geo.update(ctx, src); restart() } }.onFailure {
+                if (it !is CancellationException) Toast.makeText(ctx, ctx.getString(R.string.geo_failed, it.message ?: it.toString()), Toast.LENGTH_LONG).show()
+            }
+            geoBusy = false
+        }
+    }
     val xray = remember { runCatching { Libv2ray.checkVersionX() }.getOrDefault("") }
 
     Scaffold(
@@ -66,6 +99,32 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit) {
                 }
             }
             item {
+                val n = listOf(p.proxyRules, p.directRules, p.blockRules).map(::ruleCount)
+                Item(
+                    title = stringResource(R.string.rules),
+                    summary = if (n.sum() == 0) stringResource(R.string.rules_none) else stringResource(R.string.rules_summary, n[0], n[1], n[2]),
+                    onClick = onRules,
+                    trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                )
+            }
+            item {
+                Item(
+                    title = stringResource(R.string.geo),
+                    summary = if (p.geo == GeoSource.BUNDLED) stringResource(R.string.geo_bundled_hint)
+                    else stringResource(R.string.geo_updated, DateUtils.getRelativeTimeSpanString(p.geoUpdated).toString()),
+                    trailing = {
+                        if (geoBusy) LoadingIndicator(Modifier.size(40.dp))
+                        else if (p.geo != GeoSource.BUNDLED) IconButton(onClick = { updateGeo(p.geo) }) {
+                            Icon(Icons.Filled.Refresh, stringResource(R.string.refresh))
+                        }
+                    },
+                ) {
+                    Choice(
+                        listOf(stringResource(R.string.geo_bundled), "Loyalsoldier", "runetfreedom"), p.geo.ordinal, Modifier.padding(top = 12.dp),
+                    ) { i -> if (i != p.geo.ordinal) updateGeo(GeoSource.entries[i]) }
+                }
+            }
+            item {
                 Item(
                     last = true, title = stringResource(R.string.apps),
                     summary = when (p.appMode) {
@@ -75,6 +134,35 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit) {
                     },
                     onClick = onApps,
                     trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                )
+            }
+
+            item { Header(R.string.sec_network) }
+            item {
+                Item(
+                    first = true, title = stringResource(R.string.fragment), summary = stringResource(R.string.fragment_hint),
+                    onClick = { Store.prefs { it.copy(fragment = !it.fragment) }; restart() },
+                    trailing = { Switch(p.fragment, { v -> Store.prefs { it.copy(fragment = v) }; restart() }) },
+                )
+            }
+            item {
+                Item(
+                    title = stringResource(R.string.dns), summary = p.dns.ifEmpty { stringResource(R.string.dns_default) },
+                    onClick = { editDns = true },
+                )
+            }
+            item {
+                Item(
+                    title = stringResource(R.string.fakedns), summary = stringResource(R.string.fakedns_hint),
+                    onClick = { Store.prefs { it.copy(fakeDns = !it.fakeDns) }; restart() },
+                    trailing = { Switch(p.fakeDns, { v -> Store.prefs { it.copy(fakeDns = v) }; restart() }) },
+                )
+            }
+            item {
+                Item(
+                    last = true, title = stringResource(R.string.always_on), summary = stringResource(R.string.always_on_hint),
+                    onClick = { runCatching { ctx.startActivity(Intent(Settings.ACTION_VPN_SETTINGS)) } },
+                    trailing = { Icon(Icons.AutoMirrored.Filled.OpenInNew, null) },
                 )
             }
 
@@ -109,15 +197,34 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit) {
             }
             item {
                 Item(
-                    last = true, title = stringResource(R.string.hwid), summary = stringResource(R.string.hwid_hint),
+                    title = stringResource(R.string.hwid), summary = stringResource(R.string.hwid_hint),
                     onClick = { Store.prefs { it.copy(hwid = !it.hwid) } },
                     trailing = { Switch(p.hwid, { v -> Store.prefs { it.copy(hwid = v) } }) },
                 )
             }
 
+            item {
+                Item(last = true, title = stringResource(R.string.agent), summary = stringResource(R.string.agent_hint)) {
+                    Choice(listOf("Securify", "v2rayNG", "Happ"), p.agent.ordinal, Modifier.padding(top = 12.dp)) { i ->
+                        Store.prefs { it.copy(agent = SubAgent.entries[i]) }
+                    }
+                }
+            }
+
             item { Header(R.string.sec_about) }
-            item { Item(first = true, last = true, title = "Securify ${BuildConfig.VERSION_NAME}", summary = xray) }
+            item { Item(first = true, title = "Securify ${BuildConfig.VERSION_NAME}", summary = xray) }
+            item {
+                Item(
+                    last = true, title = stringResource(R.string.logs), summary = stringResource(R.string.logs_hint), onClick = onLogs,
+                    trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                )
+            }
         }
+    }
+
+    if (editDns) DnsDialog(p.dns, onDismiss = { editDns = false }) { v ->
+        editDns = false
+        if (v != p.dns) { Store.prefs { it.copy(dns = v) }; restart() }
     }
 
     if (editUrl) {
@@ -135,6 +242,28 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit) {
             dismissButton = { TextButton(onClick = { editUrl = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
+}
+
+@Composable
+private fun DnsDialog(current: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var dns by rememberSaveable { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dns)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.dns_hint), style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(
+                    dns, { dns = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    placeholder = { Text("https://1.1.1.1/dns-query") },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = dns.trim().none { it.isWhitespace() }, onClick = { onSave(dns.trim()) }) { Text(stringResource(R.string.save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
 }
 
 private fun toggleAuto(ctx: android.content.Context, on: Boolean) {

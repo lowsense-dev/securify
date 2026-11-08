@@ -1,7 +1,12 @@
 package app.securify.ui
 
 import android.Manifest
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,7 +57,7 @@ import app.securify.core.Store
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private class AppEntry(val pkg: String, val label: String)
+private class AppEntry(val pkg: String, val label: String, val system: Boolean)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -61,13 +66,20 @@ fun AppsScreen(onBack: () -> Unit) {
     val pm = ctx.packageManager
     val p = Store.state.collectAsState().value.prefs
     var query by rememberSaveable { mutableStateOf("") }
+    var showUser by rememberSaveable { mutableStateOf(true) }
+    var showSystem by rememberSaveable { mutableStateOf(false) }
     val apps by produceState<List<AppEntry>?>(null) {
         value = withContext(Dispatchers.IO) {
             val picked = Store.state.value.prefs.apps
             @Suppress("DEPRECATION")
             pm.getInstalledPackages(PackageManager.GET_PERMISSIONS)
                 .filter { it.packageName != ctx.packageName && it.requestedPermissions?.contains(Manifest.permission.INTERNET) == true }
-                .map { AppEntry(it.packageName, it.applicationInfo?.loadLabel(pm)?.toString() ?: it.packageName) }
+                .map {
+                    AppEntry(
+                        it.packageName, it.applicationInfo?.loadLabel(pm)?.toString() ?: it.packageName,
+                        (it.applicationInfo?.flags ?: 0) and ApplicationInfo.FLAG_SYSTEM != 0,
+                    )
+                }
                 .sortedWith(compareBy<AppEntry> { it.pkg !in picked }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.label })
         }
     }
@@ -92,11 +104,25 @@ fun AppsScreen(onBack: () -> Unit) {
                 placeholder = { Text(stringResource(R.string.search)) },
                 enabled = p.appMode != AppMode.OFF,
             )
+            Row(Modifier.padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    Triple(R.string.apps_user, showUser) { showUser = !showUser },
+                    Triple(R.string.apps_system, showSystem) { showSystem = !showSystem },
+                ).forEach { (label, on, flip) ->
+                    FilterChip(
+                        on, flip, label = { Text(stringResource(label)) },
+                        leadingIcon = { if (on) Icon(Icons.Filled.Check, null, Modifier.size(FilterChipDefaults.IconSize)) },
+                        enabled = p.appMode != AppMode.OFF,
+                    )
+                }
+            }
             val list = apps
             if (list == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator() }
             else {
                 val q = query.trim()
-                val shown = if (q.isEmpty()) list else list.filter { it.label.contains(q, true) || it.pkg.contains(q, true) }
+                // picked apps stay visible, so a filter never hides what is already in the list
+                val shown = list.filter { a -> a.pkg in p.apps || (if (a.system) showSystem else showUser) }
+                    .filter { q.isEmpty() || it.label.contains(q, true) || it.pkg.contains(q, true) }
                 LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
                     itemsIndexed(shown, key = { _, a -> a.pkg }) { i, a ->
                         val on = a.pkg in p.apps

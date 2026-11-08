@@ -28,11 +28,25 @@ data class Sub(
     val updatedAt: Long = 0,
 ) {
     val servers: List<Server> by lazy { entries.mapNotNull(::parseEntry) }
+
+    /** Balances between the subscription's link servers; JSON configs can't be merged into one config. */
+    val auto: Server? by lazy {
+        servers.filter { it.config == null && !it.needsPin }.takeIf { it.size > 1 }?.let { g ->
+            Server(AUTO_PREFIX + id, listOf(autoLabel, name).filter { it.isNotEmpty() }.joinToString(" · "),
+                "auto", "", 0, "", "", JSONObject(), group = g)
+        }
+    }
 }
+
+const val AUTO_PREFIX = "auto:"
+
+/** Set from resources at startup, the core has no Context. */
+var autoLabel = "Auto"
 
 enum class PingMethod { TCP, ICMP, REAL }
 enum class SortMode { ORIGIN, NAME, PING }
 enum class AppMode { OFF, ONLY, BYPASS }
+enum class SubAgent { SECURIFY, V2RAYNG, HAPP }
 
 data class Prefs(
     val selected: String? = null,
@@ -44,12 +58,24 @@ data class Prefs(
     val sort: SortMode = SortMode.ORIGIN,
     val hwid: Boolean = true,
     val autoUpdate: Boolean = true,
+    val fragment: Boolean = false,
+    val proxyRules: String = "",
+    val directRules: String = "",
+    val blockRules: String = "",
+    val dns: String = "",
+    val fakeDns: Boolean = false,
+    val agent: SubAgent = SubAgent.SECURIFY,
+    val geo: GeoSource = GeoSource.BUNDLED,
+    val geoUpdated: Long = 0,
 )
 
 data class AppState(val subs: List<Sub> = emptyList(), val prefs: Prefs = Prefs()) {
     val servers get() = subs.flatMap { it.servers }
 
-    val selected: Server? get() = servers.let { all -> all.firstOrNull { it.key == prefs.selected } ?: all.firstOrNull() }
+    val selected: Server? get() = prefs.selected.let { k ->
+        if (k?.startsWith(AUTO_PREFIX) == true) subs.firstOrNull { AUTO_PREFIX + it.id == k }?.auto
+        else servers.firstOrNull { it.key == k }
+    } ?: servers.firstOrNull()
 }
 
 const val MANUAL_ID = "manual"
@@ -104,6 +130,9 @@ fun encode(s: AppState): JSONObject = JSONObject()
         JSONObject().put("selected", it.selected).put("ruDirect", it.ruDirect).put("appMode", it.appMode.name)
             .put("apps", JSONArray(it.apps.toList())).put("ping", it.ping.name).put("pingUrl", it.pingUrl)
             .put("sort", it.sort.name).put("hwid", it.hwid).put("autoUpdate", it.autoUpdate)
+            .put("fragment", it.fragment).put("proxyRules", it.proxyRules).put("directRules", it.directRules)
+            .put("blockRules", it.blockRules).put("dns", it.dns).put("fakeDns", it.fakeDns).put("agent", it.agent.name)
+            .put("geo", it.geo.name).put("geoUpdated", it.geoUpdated)
     })
 
 fun decode(j: JSONObject): AppState {
@@ -134,6 +163,15 @@ fun decode(j: JSONObject): AppState {
         sort = runCatching { SortMode.valueOf(p.getString("sort")) }.getOrDefault(d.sort),
         hwid = p.optBoolean("hwid", d.hwid),
         autoUpdate = p.optBoolean("autoUpdate", d.autoUpdate),
+        fragment = p.optBoolean("fragment", d.fragment),
+        proxyRules = p.optString("proxyRules", d.proxyRules),
+        directRules = p.optString("directRules", d.directRules),
+        blockRules = p.optString("blockRules", d.blockRules),
+        dns = p.optString("dns", d.dns),
+        fakeDns = p.optBoolean("fakeDns", d.fakeDns),
+        agent = runCatching { SubAgent.valueOf(p.getString("agent")) }.getOrDefault(d.agent),
+        geo = runCatching { GeoSource.valueOf(p.getString("geo")) }.getOrDefault(d.geo),
+        geoUpdated = p.optLong("geoUpdated", d.geoUpdated),
     )
     return AppState(subs, prefs)
 }

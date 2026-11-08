@@ -82,7 +82,11 @@ class CoreTest {
         assertEquals(443, s.port)
         val st = s.outbound.getJSONObject("streamSettings")
         assertEquals("auth", st.getJSONObject("hysteriaSettings").getString("auth"))
-        assertEquals("salamander", st.getJSONObject("finalmask").getJSONArray("udp").getJSONObject(0).getString("type"))
+        val udp = st.getJSONObject("finalmask").getJSONArray("udp")
+        assertEquals("salamander", udp.getJSONObject(0).getString("type"))
+        assertEquals("udphop", udp.getJSONObject(1).getString("type"))
+        assertEquals("443,20000-30000", udp.getJSONObject(1).getJSONObject("settings").getString("remotePorts"))
+        assertFalse(parseEntry("hy2://a@h.com:443#H")!!.outbound.getJSONObject("streamSettings").has("finalmask"))
         assertFalse(st.getJSONObject("tlsSettings").has("allowInsecure"))
         assertTrue(s.needsPin)
     }
@@ -139,18 +143,18 @@ class CoreTest {
 
     @Test fun configTunAndRuRouting() {
         val s = parseEntry(vlessReality)!!
-        val c = JSONObject(buildConfig(s, ruDirect = true))
+        val c = JSONObject(buildConfig(s, Prefs(ruDirect = true)))
         val inb = c.getJSONArray("inbounds")
         assertEquals(1, inb.length())
         assertEquals("tun", inb.getJSONObject(0).getString("protocol"))
         assertEquals("proxy", c.getJSONArray("outbounds").getJSONObject(0).getString("tag"))
         assertTrue(c.getJSONObject("routing").toString().contains("geoip:ru"))
-        assertFalse(JSONObject(buildConfig(s, ruDirect = false)).getJSONObject("routing").toString().contains("geoip:ru"))
+        assertFalse(JSONObject(buildConfig(s, Prefs())).getJSONObject("routing").toString().contains("geoip:ru"))
         assertTrue(c.getJSONObject("policy").getJSONObject("system").getBoolean("statsOutboundUplink"))
     }
 
     @Test fun ipCheckInboundAlwaysExitsThroughProxy() {
-        val c = JSONObject(buildConfig(parseEntry(vlessReality)!!, ruDirect = true, ipCheckSocket = "/data/ip.sock"))
+        val c = JSONObject(buildConfig(parseEntry(vlessReality)!!, Prefs(ruDirect = true), ipCheckSocket = "/data/ip.sock"))
         val ib = c.getJSONArray("inbounds").getJSONObject(1)
         assertEquals("/data/ip.sock", ib.getString("listen"))
         assertFalse(ib.has("port"))
@@ -160,7 +164,7 @@ class CoreTest {
         val cfg = JSONObject().put("outbounds", JSONArray().put(JSONObject().put("tag", "out-1").put("protocol", "vless")
             .put("settings", JSONObject().put("address", "j.com").put("port", 443))))
             .put("routing", JSONObject().put("rules", JSONArray().put(JSONObject().put("outboundTag", "custom"))))
-        val rules = JSONObject(buildConfig(parseEntry(cfg.toString())!!, false, "/s")).getJSONObject("routing").getJSONArray("rules")
+        val rules = JSONObject(buildConfig(parseEntry(cfg.toString())!!, Prefs(), "/s")).getJSONObject("routing").getJSONArray("rules")
         assertEquals("out-1", rules.getJSONObject(0).getString("outboundTag"))
         assertEquals("custom", rules.getJSONObject(1).getString("outboundTag"))
     }
@@ -171,7 +175,7 @@ class CoreTest {
             .put("outbounds", JSONArray().put(JSONObject().put("protocol", "trojan")
                 .put("settings", JSONObject().put("servers", JSONArray().put(JSONObject().put("address", "t.com").put("port", 443))))))
             .put("routing", JSONObject().put("rules", JSONArray().put(JSONObject().put("outboundTag", "custom"))))
-        val c = JSONObject(buildConfig(parseEntry(cfg.toString())!!, ruDirect = true))
+        val c = JSONObject(buildConfig(parseEntry(cfg.toString())!!, Prefs(ruDirect = true)))
         assertEquals("tun", c.getJSONArray("inbounds").getJSONObject(0).getString("protocol"))
         assertTrue(c.getJSONObject("routing").toString().contains("custom"))
         assertFalse(JSONObject(pingConfig(parseEntry(cfg.toString())!!)).has("inbounds"))
@@ -197,11 +201,106 @@ class CoreTest {
     @Test fun stateRoundTrip() {
         val st = AppState(
             listOf(Sub("id", "https://x", "X", listOf(vlessReality), SubInfo(1, 2, 3, 4, 12, "hi", null, "w"), 99)),
-            Prefs(selected = vlessReality, ruDirect = true, appMode = AppMode.BYPASS, apps = setOf("a.b"), ping = PingMethod.REAL),
+            Prefs(
+                selected = vlessReality, ruDirect = true, appMode = AppMode.BYPASS, apps = setOf("a.b"), ping = PingMethod.REAL,
+                fragment = true, proxyRules = "a.com", directRules = "1.2.3.4", blockRules = "ads.com", dns = "tls://1.1.1.1",
+                fakeDns = true, agent = SubAgent.HAPP, geo = GeoSource.RUNETFREEDOM, geoUpdated = 5,
+            ),
         )
         val back = decode(JSONObject(encode(st).toString()))
         assertEquals(st, back)
         assertEquals(vlessReality, back.selected?.key)
         assertEquals(AppState(), decode(JSONObject()))
+    }
+
+    private fun rules(c: JSONObject) = c.getJSONObject("routing").getJSONArray("rules").let { a -> (0 until a.length()).map { a.getJSONObject(it) } }
+
+    @Test fun wireguardLink() {
+        val s = parseEntry("wireguard://c2VjcmV0%2Bkey%3D@[2001:db8::2]:51820?publickey=PUB&presharedkey=PSK" +
+            "&address=172.16.0.2/32,fd01::2/128&reserved=1,2,3&mtu=1280#WG")!!
+        assertEquals("wireguard", s.protocol)
+        assertTrue(s.isUdp)
+        val set = s.outbound.getJSONObject("settings")
+        assertEquals("c2VjcmV0+key=", set.getString("secretKey"))
+        assertEquals(2, set.getJSONArray("address").length())
+        assertEquals(1280, set.getInt("mtu"))
+        assertEquals(3, set.getJSONArray("reserved").getInt(2))
+        assertTrue(set.getBoolean("noKernelTun"))
+        val peer = set.getJSONArray("peers").getJSONObject(0)
+        assertEquals("[2001:db8::2]:51820", peer.getString("endpoint"))
+        assertEquals("PSK", peer.getString("preSharedKey"))
+        assertNull(parseEntry("wg://key@1.2.3.4:51820#no-public-key"))
+    }
+
+    @Test fun autoBalancesLinkServersFastestFirst() {
+        val json = JSONObject().put("outbounds", JSONArray().put(JSONObject().put("tag", "x").put("protocol", "vless")
+            .put("settings", JSONObject().put("address", "j.com").put("port", 443)))).toString()
+        val sub = Sub("s1", "https://x", "Prov", listOf(vlessReality, "trojan://p@t.com:443#T", "ss://" + enc("aes-256-gcm:pw") + "@2.2.2.2:1#S", json))
+        val auto = sub.auto!!
+        assertEquals(3, auto.group.size)
+        assertEquals("Auto · Prov", auto.name)
+        assertEquals(auto.key, AppState(listOf(sub), Prefs(selected = auto.key)).selected?.key)
+        assertNull(Sub("s2", "", "", listOf(vlessReality)).auto)
+
+        val pings = mapOf("trojan://p@t.com:443#T" to 40L, vlessReality to -1L)
+        val c = JSONObject(buildConfig(auto, Prefs(ruDirect = true), "/s", pings))
+        val obs = c.getJSONArray("outbounds")
+        assertEquals("proxy-0", obs.getJSONObject(0).getString("tag"))
+        assertEquals("trojan", obs.getJSONObject(0).getString("protocol"))
+        assertEquals("proxy", auto.group[1].outbound.getString("tag"))
+        val b = c.getJSONObject("routing").getJSONArray("balancers").getJSONObject(0)
+        assertEquals("leastPing", b.getJSONObject("strategy").getString("type"))
+        assertEquals("proxy-0", b.getString("fallbackTag"))
+        assertEquals("proxy-", c.getJSONObject("observatory").getJSONArray("subjectSelector").getString(0))
+        val r = rules(c)
+        assertEquals("auto", r.first().getString("balancerTag"))
+        assertEquals("tcp,udp", r.last().getString("network"))
+        assertEquals("auto", r.last().getString("balancerTag"))
+    }
+
+    @Test fun antiDpiMasksWithoutTouchingTheServer() {
+        val s = parseEntry(vlessReality)!!
+        val tcp = JSONObject(buildConfig(s, Prefs(fragment = true))).getJSONArray("outbounds").getJSONObject(0)
+            .getJSONObject("streamSettings").getJSONObject("finalmask").getJSONArray("tcp").getJSONObject(0)
+        assertEquals("fragment", tcp.getString("type"))
+        assertEquals("1-3", tcp.getJSONObject("settings").getString("packets"))
+        assertFalse(s.outbound.getJSONObject("streamSettings").has("finalmask"))
+        assertFalse(JSONObject(buildConfig(s, Prefs())).toString().contains("fragment"))
+        val hy = JSONObject(buildConfig(parseEntry("hy2://a@h.com:443#H")!!, Prefs(fragment = true)))
+        assertEquals("noise", hy.getJSONArray("outbounds").getJSONObject(0).getJSONObject("streamSettings")
+            .getJSONObject("finalmask").getJSONArray("udp").getJSONObject(0).getString("type"))
+        val salamander = parseEntry("hy2://a@h.com:443?obfs=salamander&obfs-password=x#H")!!
+        assertFalse(buildConfig(salamander, Prefs(fragment = true)).contains("noise"))
+        assertFalse(buildConfig(parseEntry("ss://" + enc("aes-256-gcm:pw") + "@2.2.2.2:1#S")!!, Prefs(fragment = true)).contains("finalmask"))
+    }
+
+    @Test fun customRulesComeBeforeRuDirect() {
+        val p = Prefs(ruDirect = true, blockRules = "ads.com\n# comment\n", proxyRules = "full:x.ru\n10.0.0.0/8\n2001:db8::/32", directRules = "geoip:cn\ngeosite:apple")
+        val r = rules(JSONObject(buildConfig(parseEntry(vlessReality)!!, p)))
+        assertEquals("block", r[0].getString("outboundTag"))
+        assertEquals("domain:ads.com", r[0].getJSONArray("domain").getString(0))
+        assertEquals("full:x.ru", r[1].getJSONArray("domain").getString(0))
+        assertEquals("proxy", r[1].getString("outboundTag"))
+        assertEquals(2, r[2].getJSONArray("ip").length())
+        assertEquals("geosite:apple", r[3].getJSONArray("domain").getString(0))
+        assertEquals("geoip:cn", r[4].getJSONArray("ip").getString(0))
+        assertEquals("direct", r[4].getString("outboundTag"))
+        assertEquals("geoip:private", r[5].getJSONArray("ip").getString(0))
+    }
+
+    @Test fun dnsHijackAndFakeDns() {
+        val s = parseEntry(vlessReality)!!
+        assertFalse(JSONObject(buildConfig(s, Prefs())).has("dns"))
+        val c = JSONObject(buildConfig(s, Prefs(dns = "https://dns.google/dns-query", fakeDns = true), "/s"))
+        val servers = c.getJSONObject("dns").getJSONArray("servers")
+        assertEquals("fakedns", servers.getString(0))
+        assertEquals("https://dns.google/dns-query", servers.getString(1))
+        assertEquals("198.18.0.0/15", c.getJSONArray("fakedns").getJSONObject(0).getString("ipPool"))
+        val r = rules(c)
+        assertEquals("ipcheck", r[0].getJSONArray("inboundTag").getString(0))
+        assertEquals("dns-out", r[1].getString("outboundTag"))
+        assertEquals("53", r[1].getString("port"))
+        assertTrue(c.getJSONArray("inbounds").getJSONObject(0).getJSONObject("sniffing").getJSONArray("destOverride").toString().contains("fakedns"))
+        assertEquals("1.1.1.1", JSONObject(buildConfig(s, Prefs(fakeDns = true))).getJSONObject("dns").getJSONArray("servers").getString(1))
     }
 }

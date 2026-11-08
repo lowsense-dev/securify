@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="connect"
+        android:shortcutShortLabel="@string/action_connect">
+        <intent
+            android:action="app.securify.CONNECT"
+            android:targetClass="app.securify.ui.ShortcutActivity"
+            android:targetPackage="app.securify" />
+    </shortcut>
+    <shortcut
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="disconnect"
+        android:shortcutShortLabel="@string/action_disconnect">
+        <intent
+            android:action="app.securify.DISCONNECT"
+            android:targetClass="app.securify.ui.ShortcutActivity"
+            android:targetPackage="app.securify" />
+    </shortcut>
+</shortcuts>

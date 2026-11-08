@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
@@ -136,7 +137,7 @@ fun ServersScreen(modifier: Modifier) {
     var pageId by rememberSaveable { mutableStateOf<String?>(null) }
     val subs = app.subs
     val wanted = subs.indexOfFirst { it.id == pageId }.takeIf { it >= 0 }
-        ?: subs.indexOfFirst { s -> s.servers.any { it.key == app.selected?.key } }.coerceAtLeast(0)
+        ?: subs.indexOfFirst { s -> s.auto?.key == app.selected?.key || s.servers.any { it.key == app.selected?.key } }.coerceAtLeast(0)
     val pager = rememberPagerState(initialPage = wanted) { subs.size }
     val latestSubs by rememberUpdatedState(subs)
     LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.collect { i -> latestSubs.getOrNull(i)?.let { pageId = it.id } } }
@@ -278,6 +279,19 @@ fun ServersScreen(modifier: Modifier) {
                                 modifier = Modifier.animateItem(),
                             )
                         }
+                        sub.auto?.let { a ->
+                            item(key = a.key) {
+                                ServerRow(
+                                    a, first = true, last = true, selected = a.key == app.selected?.key, ping = null,
+                                    modifier = Modifier.animateItem().padding(bottom = 6.dp),
+                                ) {
+                                    if (a.key != app.selected?.key) {
+                                        Store.prefs { it.copy(selected = a.key) }
+                                        SecurifyVpn.restartIfOn(ctx)
+                                    }
+                                }
+                            }
+                        }
                         itemsIndexed(servers, key = { _, s -> sub.id + "/" + s.key }) { i, s ->
                             ServerRow(
                                 s, first = i == 0, last = i == servers.lastIndex,
@@ -377,6 +391,8 @@ private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDel
     val c = MaterialTheme.colorScheme
     val info = sub.info
     var menu by remember { mutableStateOf(false) }
+    var qr by remember { mutableStateOf(false) }
+    if (qr) QrDialog(subTitle(sub), sub.url) { qr = false }
     Surface(
         shape = RoundedCornerShape(28.dp), color = c.secondaryContainer,
         modifier = modifier.fillMaxWidth().padding(top = 16.dp, bottom = 6.dp),
@@ -414,6 +430,11 @@ private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDel
                                 text = { Text(stringResource(R.string.share)) },
                                 leadingIcon = { Icon(Icons.Filled.Share, null) },
                                 onClick = { menu = false; shareText(ctx, sub.url) },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.show_qr)) },
+                                leadingIcon = { Icon(Icons.Filled.QrCode, null) },
+                                onClick = { menu = false; qr = true },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.copy_hwid)) },
@@ -481,19 +502,27 @@ private fun ServerRow(
     val c = MaterialTheme.colorScheme
     val ctx = LocalContext.current
     val shape = segmentShape(first, last)
+    val auto = s.group.isNotEmpty()
     var menu by remember { mutableStateOf(false) }
+    var qr by remember { mutableStateOf(false) }
+    if (qr) QrDialog(s.name, s.key) { qr = false }
     Box(modifier.fillMaxWidth().padding(vertical = 1.dp)) {
         Surface(
             shape = shape,
             color = if (selected) c.primaryContainer else c.surfaceContainer,
-            modifier = Modifier.fillMaxWidth().clip(shape).combinedClickable(onLongClick = { menu = true }, onClick = onClick),
+            modifier = Modifier.fillMaxWidth().clip(shape)
+                .combinedClickable(onLongClick = if (auto) null else ({ menu = true }), onClick = onClick),
         ) {
             Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 ProtocolBadge(s.protocol, selected)
                 Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
-                    Text(s.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        listOf(protocolLabel(s.protocol), s.transport, s.security).filter { it.isNotEmpty() && it != "none" }.joinToString(" · "),
+                        if (auto) stringResource(R.string.auto) else s.name,
+                        style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        if (auto) stringResource(R.string.auto_hint, s.group.size)
+                        else listOf(protocolLabel(s.protocol), s.transport, s.security).filter { it.isNotEmpty() && it != "none" }.joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
                     )
                 }
@@ -510,6 +539,11 @@ private fun ServerRow(
                 text = { Text(stringResource(R.string.share)) },
                 leadingIcon = { Icon(Icons.Filled.Share, null) },
                 onClick = { menu = false; shareText(ctx, s.key) },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.show_qr)) },
+                leadingIcon = { Icon(Icons.Filled.QrCode, null) },
+                onClick = { menu = false; qr = true },
             )
         }
     }
