@@ -84,6 +84,10 @@ object Store {
     }
 
     fun removeSub(id: String) = update { s -> s.copy(subs = s.subs.filter { it.id != id }) }
+
+    fun reorderSubs(ids: List<String>) = update { s ->
+        s.copy(subs = ids.mapNotNull { id -> s.subs.find { it.id == id } } + s.subs.filter { it.id !in ids })
+    }
 }
 
 fun encode(s: AppState): JSONObject = JSONObject()

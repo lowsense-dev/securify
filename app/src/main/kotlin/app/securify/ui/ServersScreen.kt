@@ -21,10 +21,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -71,6 +73,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.toShape
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -79,11 +82,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -105,6 +113,8 @@ import app.securify.vpn.SecurifyVpn
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.Dispatchers
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
@@ -124,11 +134,15 @@ fun ServersScreen(modifier: Modifier) {
     var manual by rememberSaveable { mutableStateOf(false) }
     var sortMenu by remember { mutableStateOf(false) }
     var pageId by rememberSaveable { mutableStateOf<String?>(null) }
-    val page = app.subs.firstOrNull { it.id == pageId }
-        ?: app.subs.firstOrNull { s -> s.servers.any { it.key == app.selected?.key } } ?: app.subs.firstOrNull()
+    val subs = app.subs
+    val wanted = subs.indexOfFirst { it.id == pageId }.takeIf { it >= 0 }
+        ?: subs.indexOfFirst { s -> s.servers.any { it.key == app.selected?.key } }.coerceAtLeast(0)
+    val pager = rememberPagerState(initialPage = wanted) { subs.size }
+    val latestSubs by rememberUpdatedState(subs)
+    LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.collect { i -> latestSubs.getOrNull(i)?.let { pageId = it.id } } }
+    LaunchedEffect(wanted) { if (wanted < pager.pageCount && pager.currentPage != wanted) pager.scrollToPage(wanted) }
+    val page = subs.getOrNull(pager.currentPage)
     val list = page?.let { sortServers(it.servers, app.prefs.sort, pings) }.orEmpty()
-    val listState = rememberLazyListState()
-    LaunchedEffect(page?.id) { listState.scrollToItem(0) }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     fun import(text: String?) {
@@ -171,7 +185,7 @@ fun ServersScreen(modifier: Modifier) {
         topBar = {
             LargeFlexibleTopAppBar(
                 title = { Text(stringResource(R.string.tab_servers)) },
-                subtitle = { Text(pluralStringResource(R.plurals.servers, app.servers.size, app.servers.size)) },
+                subtitle = { Text(pluralStringResource(R.plurals.servers, list.size, list.size)) },
                 scrollBehavior = scroll,
                 actions = {
                     Box {
@@ -230,29 +244,24 @@ fun ServersScreen(modifier: Modifier) {
             }
         },
     ) { pad ->
-        val pull = rememberPullToRefreshState()
-        val pulling = page != null && page.id in refreshing
         Column(Modifier.padding(pad)) {
-            if (app.subs.size > 1) Row(
-                Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                app.subs.forEach { s ->
-                    ToggleButton(checked = s.id == page?.id, onCheckedChange = { pageId = s.id }) {
-                        Text(subTitle(s), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp))
-                    }
-                }
+            if (subs.size > 1) SubTabs(subs, page?.id) { id ->
+                scope.launch { pager.animateScrollToPage(subs.indexOfFirst { it.id == id }) }
             }
-            PullToRefreshBox(
-                isRefreshing = pulling,
-                onRefresh = { page?.takeIf { it.url.isNotEmpty() }?.let { refresh(listOf(it)) } },
-                state = pull,
-                modifier = Modifier.weight(1f),
-                indicator = { PullToRefreshDefaults.LoadingIndicator(state = pull, isRefreshing = pulling, modifier = Modifier.align(Alignment.TopCenter)) },
-            ) {
-                if (page == null) EmptyState()
-                else LazyColumn(Modifier.fillMaxSize(), listState, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp)) {
-                    page.let { sub ->
+            if (subs.isEmpty()) EmptyState()
+            else HorizontalPager(pager, Modifier.weight(1f), key = { subs.getOrNull(it)?.id ?: it }) { index ->
+                val sub = subs.getOrNull(index) ?: return@HorizontalPager
+                val servers = sortServers(sub.servers, app.prefs.sort, pings)
+                val pull = rememberPullToRefreshState()
+                val pulling = sub.id in refreshing
+                PullToRefreshBox(
+                    isRefreshing = pulling,
+                    onRefresh = { if (sub.url.isNotEmpty()) refresh(listOf(sub)) },
+                    state = pull,
+                    modifier = Modifier.fillMaxSize(),
+                    indicator = { PullToRefreshDefaults.LoadingIndicator(state = pull, isRefreshing = pulling, modifier = Modifier.align(Alignment.TopCenter)) },
+                ) {
+                    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp)) {
                         item(key = "sub:" + sub.id) {
                             SubPanel(
                                 sub,
@@ -268,9 +277,9 @@ fun ServersScreen(modifier: Modifier) {
                                 modifier = Modifier.animateItem(),
                             )
                         }
-                        itemsIndexed(list, key = { _, s -> sub.id + "/" + s.key }) { i, s ->
+                        itemsIndexed(servers, key = { _, s -> sub.id + "/" + s.key }) { i, s ->
                             ServerRow(
-                                s, first = i == 0, last = i == list.lastIndex,
+                                s, first = i == 0, last = i == servers.lastIndex,
                                 selected = s.key == app.selected?.key, ping = pings[s.key],
                                 modifier = Modifier.animateItem(),
                             ) {
@@ -287,6 +296,46 @@ fun ServersScreen(modifier: Modifier) {
     }
 
     if (manual) ManualDialog(onDismiss = { manual = false }) { manual = false; import(it) }
+}
+
+@Composable
+private fun SubTabs(subs: List<Sub>, current: String?, onSelect: (String) -> Unit) {
+    val haptic = LocalHapticFeedback.current
+    var order by remember(subs) { mutableStateOf(subs) }
+    val rowState = rememberLazyListState()
+    LaunchedEffect(current) {
+        val i = order.indexOfFirst { it.id == current }
+        val info = rowState.layoutInfo
+        val item = info.visibleItemsInfo.firstOrNull { it.index == i }
+        if (i >= 0 && (item == null || item.offset < 0 || item.offset + item.size > info.viewportEndOffset)) rowState.animateScrollToItem(i)
+    }
+    val reorder = rememberReorderableLazyListState(rowState) { from, to ->
+        order = order.toMutableList().apply { add(to.index, removeAt(from.index)) }
+        haptic.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+    }
+    LazyRow(
+        state = rowState,
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(order, key = { it.id }) { s ->
+            ReorderableItem(reorder, key = s.id) { dragging ->
+                val scale by animateFloatAsState(if (dragging) 1.08f else 1f)
+                ToggleButton(
+                    checked = s.id == current,
+                    onCheckedChange = { onSelect(s.id) },
+                    modifier = Modifier
+                        .graphicsLayer { scaleX = scale; scaleY = scale }
+                        .longPressDraggableHandle(
+                            onDragStarted = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                            onDragStopped = { Store.reorderSubs(order.map { it.id }) },
+                        ),
+                ) {
+                    Text(subTitle(s), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp))
+                }
+            }
+        }
+    }
 }
 
 private fun clipboardText(ctx: Context): String? =

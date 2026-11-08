@@ -16,6 +16,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Settings
@@ -31,7 +33,7 @@ import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -40,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.securify.R
 import app.securify.vpn.SecurifyVpn
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,7 +66,9 @@ private val tabs = listOf(
 @Composable
 fun SecurifyApp() {
     val ctx = LocalContext.current
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    val pager = rememberPagerState { tabs.size }
+    val scope = rememberCoroutineScope()
+    val go = { i: Int -> scope.launch { pager.animateScrollToPage(i) }; Unit }
     var appsOpen by rememberSaveable { mutableStateOf(false) }
 
     val vpnPermission = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -94,20 +99,21 @@ fun SecurifyApp() {
             ShortNavigationBar {
                 tabs.forEachIndexed { i, t ->
                     ShortNavigationBarItem(
-                        selected = tab == i,
-                        onClick = { tab = i },
-                        icon = { Icon(if (tab == i) t.on else t.off, null) },
+                        selected = pager.targetPage == i,
+                        onClick = { go(i) },
+                        icon = { Icon(if (pager.targetPage == i) t.on else t.off, null) },
                         label = { Text(stringResource(t.label)) },
                     )
                 }
             }
         },
     ) { pad ->
-        val m = Modifier.padding(pad).consumeWindowInsets(pad)
-        when (tab) {
-            0 -> HomeScreen(m, onToggle = toggle, onServers = { tab = 1 })
-            1 -> ServersScreen(m)
-            else -> SettingsScreen(m, onApps = { appsOpen = true })
+        HorizontalPager(pager, Modifier.padding(pad).consumeWindowInsets(pad)) { i ->
+            when (i) {
+                0 -> HomeScreen(Modifier, onToggle = toggle, onServers = { go(1) })
+                1 -> ServersScreen(Modifier)
+                else -> SettingsScreen(Modifier, onApps = { appsOpen = true })
+            }
         }
     }
 }

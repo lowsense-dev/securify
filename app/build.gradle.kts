@@ -80,6 +80,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.graphics:graphics-shapes:1.1.0")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    implementation("sh.calvin.reorderable:reorderable:3.1.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250517")
