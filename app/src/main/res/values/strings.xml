@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Securify</string>
+    <string name="tab_home">Home</string>
+    <string name="tab_servers">Servers</string>
+    <string name="tab_settings">Settings</string>
+
+    <string name="status_off">Not protected</string>
+    <string name="status_off_hint">Tap the shield to connect</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_on">Protected</string>
+    <string name="status_failed">Connection failed</string>
+    <string name="action_connect">Connect</string>
+    <string name="action_disconnect">Disconnect</string>
+    <string name="error_no_server">No server selected. Add a subscription first.</string>
+    <string name="error_vpn_permission">VPN permission was not granted</string>
+    <string name="notif_channel">VPN status</string>
+    <string name="notif_connected">Connected to %1$s</string>
+    <string name="speed">%1$s/s</string>
+    <string name="add_first_sub">Add a subscription</string>
+    <string name="exit_detecting">Detecting IP…</string>
+    <string name="exit_unknown">Couldn\'t detect the exit IP</string>
+
+    <string name="ping_fail">timeout</string>
+    <string name="ping_ms">%1$d ms</string>
+    <string name="ping_all">Ping all</string>
+    <string name="sort">Sort</string>
+    <string name="sort_origin">As in subscription</string>
+    <string name="sort_name">By name</string>
+    <string name="sort_ping">By ping</string>
+
+    <string name="add">Add</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="undo">Undo</string>
+    <string name="refresh">Refresh</string>
+    <string name="search">Search apps</string>
+
+    <string name="import_clipboard">From clipboard</string>
+    <string name="import_qr">Scan QR code</string>
+    <string name="import_manual">Enter manually</string>
+    <string name="qr_prompt">Point the camera at a subscription QR code</string>
+    <string name="manual_hint">Subscription URL or server links (vless, vmess, trojan, ss, hy2), one per line.</string>
+    <string name="imported_sub">Added “%1$s”: %2$d servers</string>
+    <string name="imported_servers">Servers added: %1$d</string>
+    <string name="import_nothing">Nothing to import: no subscription URL or server links found</string>
+    <string name="import_failed">Import failed: %1$s</string>
+    <string name="refresh_failed">Couldn\'t refresh “%1$s”: %2$s</string>
+    <string name="sub_deleted">“%1$s” deleted</string>
+    <string name="manual_group">Manual</string>
+    <string name="empty_title">No servers yet</string>
+    <string name="empty_hint">Tap + to add a subscription from the clipboard, a QR code or by hand</string>
+
+    <string name="sub_support">Support</string>
+    <string name="sub_web">Subscription page</string>
+    <string name="traffic_left">%1$s left</string>
+    <string name="traffic_of">%1$s of %2$s</string>
+    <string name="traffic_unlimited">Used %1$s · unlimited</string>
+    <string name="expires">Until %1$s</string>
+    <string name="expired">Expired %1$s</string>
+
+    <plurals name="servers">
+        <item quantity="one">%d server</item>
+        <item quantity="other">%d servers</item>
+    </plurals>
+    <plurals name="days_left">
+        <item quantity="one">%d day left</item>
+        <item quantity="other">%d days left</item>
+    </plurals>
+
+    <string name="sec_routing">Routing</string>
+    <string name="routing">Traffic</string>
+    <string name="routing_hint">Russian sites and IPs can bypass the proxy</string>
+    <string name="routing_all">Everything</string>
+    <string name="routing_ru">RU direct</string>
+    <string name="apps">Apps</string>
+    <string name="apps_off">All apps use the VPN</string>
+    <string name="apps_only_n">Only selected: %1$d</string>
+    <string name="apps_bypass_n">All except selected: %1$d</string>
+    <string name="apps_mode_off">All</string>
+    <string name="apps_mode_only">Only</string>
+    <string name="apps_mode_bypass">Bypass</string>
+
+    <string name="sec_ping">Ping</string>
+    <string name="ping_method">Method</string>
+    <string name="ping_real">Real</string>
+    <string name="ping_tcp_hint">TCP handshake to the server, fast</string>
+    <string name="ping_icmp_hint">Classic ICMP ping, some servers block it</string>
+    <string name="ping_real_hint">HTTP request through the proxy, shows if it actually works</string>
+    <string name="ping_url">Test URL</string>
+
+    <string name="sec_subs">Subscriptions</string>
+    <string name="auto_update">Auto-update</string>
+    <string name="auto_update_hint">Uses the panel\'s update interval, once a day by default</string>
+    <string name="hwid">Send HWID</string>
+    <string name="hwid_hint">%1$s · tap to copy</string>
+    <string name="sec_about">About</string>
+</resources>

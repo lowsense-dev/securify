@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tab_home">Главная</string>
+    <string name="tab_servers">Серверы</string>
+    <string name="tab_settings">Настройки</string>
+
+    <string name="status_off">Не защищено</string>
+    <string name="status_off_hint">Нажмите на щит, чтобы подключиться</string>
+    <string name="status_connecting">Подключение…</string>
+    <string name="status_on">Защищено</string>
+    <string name="status_failed">Ошибка подключения</string>
+    <string name="action_connect">Подключить</string>
+    <string name="action_disconnect">Отключить</string>
+    <string name="error_no_server">Сервер не выбран. Сначала добавьте подписку.</string>
+    <string name="error_vpn_permission">Разрешение на VPN не выдано</string>
+    <string name="notif_channel">Статус VPN</string>
+    <string name="notif_connected">Подключено: %1$s</string>
+    <string name="speed">%1$s/с</string>
+    <string name="add_first_sub">Добавить подписку</string>
+    <string name="exit_detecting">Определяем IP…</string>
+    <string name="exit_unknown">Не удалось определить IP</string>
+
+    <string name="ping_fail">нет ответа</string>
+    <string name="ping_ms">%1$d мс</string>
+    <string name="ping_all">Пинг всех</string>
+    <string name="sort">Сортировка</string>
+    <string name="sort_origin">Как в подписке</string>
+    <string name="sort_name">По названию</string>
+    <string name="sort_ping">По пингу</string>
+
+    <string name="add">Добавить</string>
+    <string name="cancel">Отмена</string>
+    <string name="save">Сохранить</string>
+    <string name="delete">Удалить</string>
+    <string name="undo">Вернуть</string>
+    <string name="refresh">Обновить</string>
+    <string name="search">Поиск приложений</string>
+
+    <string name="import_clipboard">Из буфера обмена</string>
+    <string name="import_qr">Сканировать QR-код</string>
+    <string name="import_manual">Ввести вручную</string>
+    <string name="qr_prompt">Наведите камеру на QR-код подписки</string>
+    <string name="manual_hint">Ссылка на подписку или ссылки серверов (vless, vmess, trojan, ss, hy2), по одной на строку.</string>
+    <string name="imported_sub">Добавлена «%1$s»: серверов %2$d</string>
+    <string name="imported_servers">Добавлено серверов: %1$d</string>
+    <string name="import_nothing">Нечего импортировать: не найдено ни подписки, ни ссылок</string>
+    <string name="import_failed">Не удалось импортировать: %1$s</string>
+    <string name="refresh_failed">Не удалось обновить «%1$s»: %2$s</string>
+    <string name="sub_deleted">«%1$s» удалена</string>
+    <string name="manual_group">Добавленные вручную</string>
+    <string name="empty_title">Серверов пока нет</string>
+    <string name="empty_hint">Нажмите +, чтобы добавить подписку из буфера, по QR-коду или вручную</string>
+
+    <string name="sub_support">Поддержка</string>
+    <string name="sub_web">Страница подписки</string>
+    <string name="traffic_left">Осталось %1$s</string>
+    <string name="traffic_of">%1$s из %2$s</string>
+    <string name="traffic_unlimited">Использовано %1$s · безлимит</string>
+    <string name="expires">До %1$s</string>
+    <string name="expired">Истекла %1$s</string>
+
+    <plurals name="servers">
+        <item quantity="one">%d сервер</item>
+        <item quantity="few">%d сервера</item>
+        <item quantity="many">%d серверов</item>
+        <item quantity="other">%d сервера</item>
+    </plurals>
+    <plurals name="days_left">
+        <item quantity="one">остался %d день</item>
+        <item quantity="few">осталось %d дня</item>
+        <item quantity="many">осталось %d дней</item>
+        <item quantity="other">осталось %d дня</item>
+    </plurals>
+
+    <string name="sec_routing">Маршрутизация</string>
+    <string name="routing">Трафик</string>
+    <string name="routing_hint">Российские сайты и IP можно пускать напрямую</string>
+    <string name="routing_all">Весь трафик</string>
+    <string name="routing_ru">RU напрямую</string>
+    <string name="apps">Приложения</string>
+    <string name="apps_off">Все приложения через VPN</string>
+    <string name="apps_only_n">Только выбранные: %1$d</string>
+    <string name="apps_bypass_n">Все, кроме выбранных: %1$d</string>
+    <string name="apps_mode_off">Все</string>
+    <string name="apps_mode_only">Только</string>
+    <string name="apps_mode_bypass">Кроме</string>
+
+    <string name="sec_ping">Пинг</string>
+    <string name="ping_method">Метод</string>
+    <string name="ping_real">Реальный</string>
+    <string name="ping_tcp_hint">TCP-рукопожатие с сервером, быстро</string>
+    <string name="ping_icmp_hint">Обычный ICMP-пинг, некоторые серверы его режут</string>
+    <string name="ping_real_hint">HTTP-запрос через прокси, показывает, что сервер реально работает</string>
+    <string name="ping_url">Адрес проверки</string>
+
+    <string name="sec_subs">Подписки</string>
+    <string name="auto_update">Автообновление</string>
+    <string name="auto_update_hint">По интервалу из панели, по умолчанию раз в сутки</string>
+    <string name="hwid">Отправлять HWID</string>
+    <string name="hwid_hint">%1$s · нажмите, чтобы скопировать</string>
+    <string name="sec_about">О приложении</string>
+</resources>
