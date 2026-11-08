@@ -90,6 +90,10 @@ Required repository secrets:
 - Subscriptions are downloaded outside the VPN.
 - The ip-api.com request goes over plain HTTP, without encryption.
 
+## License
+
+Securify is licensed under [GPL-3.0](LICENSE).
+
 ## Third-party licenses
 
 - [Xray-core](https://github.com/XTLS/Xray-core): MPL-2.0.

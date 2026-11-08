@@ -90,6 +90,10 @@ git tag v1.0.1 && git push origin v1.0.1
 - Подписки скачиваются в обход VPN.
 - Запрос к ip-api.com идёт по HTTP, без шифрования.
 
+## Лицензия
+
+Securify распространяется под лицензией [GPL-3.0](LICENSE).
+
 ## Лицензии сторонних компонентов
 
 - [Xray-core](https://github.com/XTLS/Xray-core): MPL-2.0.
