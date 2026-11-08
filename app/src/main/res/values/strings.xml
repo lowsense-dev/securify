@@ -14,6 +14,8 @@
     <string name="action_disconnect">Disconnect</string>
     <string name="error_no_server">No server selected. Add a subscription first.</string>
     <string name="error_vpn_permission">VPN permission was not granted</string>
+    <string name="error_insecure">This server needs certificate checks turned off (insecure=1), which Xray 26 no longer allows. Ask your provider for a link with pinSHA256.</string>
+    <string name="status_no_link">no connection through the server</string>
     <string name="notif_channel">VPN status</string>
     <string name="notif_connected">Connected to %1$s</string>
     <string name="speed">%1$s/s</string>
@@ -97,6 +99,7 @@
     <string name="auto_update">Auto-update</string>
     <string name="auto_update_hint">Uses the panel\'s update interval, once a day by default</string>
     <string name="hwid">Send HWID</string>
-    <string name="hwid_hint">%1$s · tap to copy</string>
+    <string name="hwid_hint">Unique for each subscription, so providers can\'t link your device</string>
+    <string name="copy_hwid">Copy HWID</string>
     <string name="sec_about">About</string>
 </resources>

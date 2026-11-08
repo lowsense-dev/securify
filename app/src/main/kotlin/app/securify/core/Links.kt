@@ -15,6 +15,8 @@ class Server(
     val security: String,
     val outbound: JSONObject,
     val config: JSONObject? = null,
+    /** insecure=1 without a certificate pin: Xray 26 removed allowInsecure, so this can't connect. */
+    val needsPin: Boolean = false,
 ) {
     val isUdp get() = protocol == "hysteria"
 }
@@ -85,8 +87,14 @@ private fun server(raw: String, p: Parts, protocol: String, settings: JSONObject
     val ob = JSONObject().put("tag", "proxy").put("protocol", protocol).put("settings", settings)
         .put("streamSettings", stream(net, sec, p.q, p.host))
     val n = ob.getJSONObject("streamSettings").getString("network")
-    return Server(raw, p.name.ifEmpty { "${p.host}:${p.port}" }, protocol, p.host, p.port, n, sec, ob)
+    return Server(
+        raw, p.name.ifEmpty { "${p.host}:${p.port}" }, protocol, p.host, p.port, n, sec, ob,
+        needsPin = sec == "tls" && needsPin(p.q, p.q["pcs"]),
+    )
 }
+
+private fun needsPin(q: Map<String, String>, pin: String?) =
+    (q["allowInsecure"] == "1" || q["insecure"] == "1") && pin.isNullOrEmpty()
 
 private fun isDomain(h: String) = h.any { it.isLetter() } && ':' !in h
 
@@ -127,7 +135,6 @@ private fun stream(net0: String, sec: String, q: Map<String, String>, address: S
             sni?.let { put("serverName", it) }
             fp?.let { put("fingerprint", it) }
             q["alpn"]?.takeIf { it.isNotEmpty() }?.let { put("alpn", JSONArray(it.split(',').map(String::trim))) }
-            if (q["allowInsecure"] == "1" || q["insecure"] == "1") put("allowInsecure", true)
             q["ech"]?.takeIf { it.isNotEmpty() }?.let { put("echConfigList", it) }
             q["pcs"]?.takeIf { it.isNotEmpty() }?.let { put("pinnedPeerCertSha256", it) }
         })
@@ -191,7 +198,6 @@ private fun hysteria2(raw: String, rest: String): Server {
     val p = split(rest)
     val q = p.q
     val tls = JSONObject().put("serverName", q["sni"]?.ifEmpty { null } ?: p.host).put("alpn", JSONArray().put("h3"))
-    if (q["insecure"] == "1") tls.put("allowInsecure", true)
     q["pinSHA256"]?.takeIf { it.isNotEmpty() }?.let { tls.put("pinnedPeerCertSha256", it.replace(":", "")) }
     val stream = JSONObject().put("network", "hysteria").put("security", "tls").put("tlsSettings", tls)
         .put("hysteriaSettings", JSONObject().put("version", 2).put("auth", p.user))
@@ -200,7 +206,10 @@ private fun hysteria2(raw: String, rest: String): Server {
     val ob = JSONObject().put("tag", "proxy").put("protocol", "hysteria")
         .put("settings", JSONObject().put("version", 2).put("address", p.host).put("port", p.port))
         .put("streamSettings", stream)
-    return Server(raw, p.name.ifEmpty { "${p.host}:${p.port}" }, "hysteria", p.host, p.port, "quic", "tls", ob)
+    return Server(
+        raw, p.name.ifEmpty { "${p.host}:${p.port}" }, "hysteria", p.host, p.port, "quic", "tls", ob,
+        needsPin = needsPin(q, q["pinSHA256"]),
+    )
 }
 
 private val notProxy = setOf("freedom", "blackhole", "dns", "loopback")

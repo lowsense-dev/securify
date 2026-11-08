@@ -74,7 +74,7 @@ Required repository secrets:
 | `SIGNING_KEY_ALIAS` | `securify` |
 | `SIGNING_KEY_PASSWORD` | key password |
 
-`versionCode` comes from the workflow run number and `versionName` from the tag.
+`versionName` comes from the tag and `versionCode` is derived from it: `v1.3.0` → `10300`. Tags must look like `v1.2.3`.
 
 ## How it works
 

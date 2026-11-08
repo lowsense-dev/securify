@@ -39,7 +39,6 @@ import app.securify.core.AppMode
 import app.securify.core.PingMethod
 import app.securify.core.Store
 import app.securify.core.SubUpdateJob
-import app.securify.core.Subs
 import app.securify.vpn.SecurifyVpn
 import libv2ray.Libv2ray
 
@@ -50,7 +49,6 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit) {
     val p = Store.state.collectAsState().value.prefs
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var editUrl by rememberSaveable { mutableStateOf(false) }
-    val hwid = remember { Subs.hwid(ctx) }
     val xray = remember { runCatching { Libv2ray.checkVersionX() }.getOrDefault("") }
 
     Scaffold(
@@ -111,10 +109,8 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit) {
             }
             item {
                 Item(
-                    last = true, title = stringResource(R.string.hwid), summary = stringResource(R.string.hwid_hint, hwid),
-                    onClick = {
-                        copyText(ctx, "HWID", hwid)
-                    },
+                    last = true, title = stringResource(R.string.hwid), summary = stringResource(R.string.hwid_hint),
+                    onClick = { Store.prefs { it.copy(hwid = !it.hwid) } },
                     trailing = { Switch(p.hwid, { v -> Store.prefs { it.copy(hwid = v) } }) },
                 )
             }

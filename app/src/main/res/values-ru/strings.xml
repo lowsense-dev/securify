@@ -13,6 +13,8 @@
     <string name="action_disconnect">Отключить</string>
     <string name="error_no_server">Сервер не выбран. Сначала добавьте подписку.</string>
     <string name="error_vpn_permission">Разрешение на VPN не выдано</string>
+    <string name="error_insecure">Сервер требует отключить проверку сертификата (insecure=1), а Xray 26 так больше не умеет. Попросите у провайдера ссылку с pinSHA256.</string>
+    <string name="status_no_link">нет связи через сервер</string>
     <string name="notif_channel">Статус VPN</string>
     <string name="notif_connected">Подключено: %1$s</string>
     <string name="speed">%1$s/с</string>
@@ -100,6 +102,7 @@
     <string name="auto_update">Автообновление</string>
     <string name="auto_update_hint">По интервалу из панели, по умолчанию раз в сутки</string>
     <string name="hwid">Отправлять HWID</string>
-    <string name="hwid_hint">%1$s · нажмите, чтобы скопировать</string>
+    <string name="hwid_hint">Свой для каждой подписки, провайдеры не смогут связать устройство</string>
+    <string name="copy_hwid">Копировать HWID</string>
     <string name="sec_about">О приложении</string>
 </resources>

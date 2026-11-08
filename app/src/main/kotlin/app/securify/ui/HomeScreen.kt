@@ -252,13 +252,16 @@ private fun Status(state: VpnState) {
     AnimatedContent(title, label = "status") { t ->
         Text(stringResource(t), style = MaterialTheme.typography.headlineSmallEmphasized, textAlign = TextAlign.Center)
     }
+    val online by SecurifyVpn.online.collectAsState()
+    val broken = state is VpnState.Failed || (state is VpnState.On && !online)
     val sub = when (state) {
         is VpnState.On -> {
             val now by produceState(System.currentTimeMillis(), state.since) {
                 while (true) { value = System.currentTimeMillis(); delay(1000) }
             }
             val s = (now - state.since).coerceAtLeast(0) / 1000
-            "%02d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60)
+            "%02d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) +
+                if (online) "" else " · " + stringResource(R.string.status_no_link)
         }
         is VpnState.Failed -> state.message
         VpnState.Off -> stringResource(R.string.status_off_hint)
@@ -267,7 +270,7 @@ private fun Status(state: VpnState) {
     Text(
         sub,
         style = MaterialTheme.typography.bodyLarge,
-        color = if (state is VpnState.Failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+        color = if (broken) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
         maxLines = 3, overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(top = 4.dp, start = 16.dp, end = 16.dp),

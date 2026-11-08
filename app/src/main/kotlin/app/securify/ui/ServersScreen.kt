@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
@@ -413,6 +414,11 @@ private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDel
                                 text = { Text(stringResource(R.string.share)) },
                                 leadingIcon = { Icon(Icons.Filled.Share, null) },
                                 onClick = { menu = false; shareText(ctx, sub.url) },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.copy_hwid)) },
+                                leadingIcon = { Icon(Icons.Filled.Fingerprint, null) },
+                                onClick = { menu = false; copyText(ctx, "HWID", Subs.hwid(ctx, sub.url)) },
                             )
                         }
                         DropdownMenuItem(text = { Text(stringResource(R.string.delete)) }, onClick = { menu = false; onDelete() })

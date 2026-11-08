@@ -11,6 +11,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
+import java.security.MessageDigest
 import java.util.UUID
 
 fun parseBody(body: String): List<String> {
@@ -43,9 +44,17 @@ fun subName(title: String?, disposition: String?, url: String): String {
     return runCatching { URI(url).host }.getOrNull() ?: url
 }
 
+/** Per-provider HWID, so two panels can't match the same device by its id. */
+fun hwidFor(deviceId: String, url: String): String {
+    val host = runCatching { URI(url).host }.getOrNull() ?: url
+    return MessageDigest.getInstance("SHA-256").digest("$deviceId|$host".toByteArray())
+        .joinToString("") { "%02x".format(it) }.take(32)
+}
+
 object Subs {
     @SuppressLint("HardwareIds")
-    fun hwid(ctx: Context): String = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ANDROID_ID)
+    fun hwid(ctx: Context, url: String): String =
+        hwidFor(Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ANDROID_ID), url)
 
     fun fetch(ctx: Context, url: String, id: String = UUID.randomUUID().toString()): Sub {
         val c = URL(url).openConnection() as HttpURLConnection
@@ -55,7 +64,7 @@ object Subs {
             c.setRequestProperty("User-Agent", "Securify/${BuildConfig.VERSION_NAME}")
             c.setRequestProperty("Accept", "*/*")
             if (Store.state.value.prefs.hwid) {
-                c.setRequestProperty("x-hwid", hwid(ctx))
+                c.setRequestProperty("x-hwid", hwid(ctx, url))
                 c.setRequestProperty("x-device-os", "Android")
                 c.setRequestProperty("x-ver-os", Build.VERSION.RELEASE)
                 c.setRequestProperty("x-device-model", Build.MODEL)

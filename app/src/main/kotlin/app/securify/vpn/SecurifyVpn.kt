@@ -52,6 +52,9 @@ class SecurifyVpn : VpnService() {
 
         val exit = MutableStateFlow<String?>(null)
 
+        /** False when the periodic check through the running core fails. */
+        val online = MutableStateFlow(true)
+
         private const val ACTION_START = "start"
         private const val ACTION_STOP = "stop"
         private const val NOTIF_ID = 1
@@ -83,7 +86,7 @@ class SecurifyVpn : VpnService() {
             else -> {
                 foreground(getString(R.string.status_connecting))
                 val prev = session
-                session = scope.launch { prev?.cancelAndJoin(); teardown(); run() }
+                session = scope.launch { prev?.cancelAndJoin(); run() }
             }
         }
         return START_NOT_STICKY
@@ -92,10 +95,14 @@ class SecurifyVpn : VpnService() {
     private suspend fun run() {
         state.value = VpnState.Connecting
         exit.value = null
+        online.value = true
+        var newTun: ParcelFileDescriptor? = null
+        var newCore: CoreController? = null
         try {
             val st = Store.state.value
             val server = st.selected ?: error(getString(R.string.error_no_server))
-            val sock = File(filesDir, "ipcheck.sock").apply { delete(); File("$path.lock").delete() }
+            check(!server.needsPin) { getString(R.string.error_insecure) }
+            val sock = File(filesDir, "ipcheck-${System.currentTimeMillis()}.sock")
             val config = buildConfig(server, st.prefs.ruDirect, sock.path)
             ensureGeoFiles()
             val b = Builder()
@@ -117,25 +124,42 @@ class SecurifyVpn : VpnService() {
                 st.prefs.appMode == AppMode.BYPASS -> (apps + packageName).forEach { runCatching { b.addDisallowedApplication(it) } }
                 else -> b.addDisallowedApplication(packageName)
             }
+            // a second establish() takes over from the old interface without a gap, so switching servers never leaks
             val fd = b.establish() ?: error(getString(R.string.error_vpn_permission))
-            tun = fd
+            newTun = fd
             val c = Libv2ray.newCoreController(object : CoreCallbackHandler {
                 override fun startup() = 0L
                 override fun shutdown() = 0L
                 override fun onEmitStatus(p0: Long, p1: String?) = 0L
             })
-            core = c
+            newCore = c
             c.startLoop(config, fd.fd)
+            teardown()
+            core = c
+            tun = fd
+            filesDir.listFiles { f -> f.name.startsWith("ipcheck") && !f.name.startsWith(sock.name) }?.forEach { it.delete() }
             state.value = VpnState.On(server.name, System.currentTimeMillis())
             foreground(getString(R.string.notif_connected, server.name))
             coroutineScope {
                 launch { exit.value = lookupExit(sock) ?: getString(R.string.exit_unknown) }
+                launch { watchLink(c, st.prefs.pingUrl) }
                 pollTraffic(c)
             }
         } catch (e: Exception) {
+            if (core !== newCore) {
+                runCatching { newCore?.stopLoop() }
+                runCatching { newTun?.close() }
+            }
             if (e is kotlinx.coroutines.CancellationException) throw e
             teardown()
             finish(VpnState.Failed(e.message ?: e.toString()))
+        }
+    }
+
+    private suspend fun watchLink(c: CoreController, url: String) {
+        while (true) {
+            delay(60_000)
+            online.value = (1..2).any { runCatching { c.measureDelay(url) >= 0 }.getOrDefault(false) }
         }
     }
 
@@ -208,6 +232,7 @@ class SecurifyVpn : VpnService() {
         state.value = s
         traffic.value = Traffic()
         exit.value = null
+        online.value = true
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }

@@ -83,7 +83,21 @@ class CoreTest {
         val st = s.outbound.getJSONObject("streamSettings")
         assertEquals("auth", st.getJSONObject("hysteriaSettings").getString("auth"))
         assertEquals("salamander", st.getJSONObject("finalmask").getJSONArray("udp").getJSONObject(0).getString("type"))
-        assertTrue(st.getJSONObject("tlsSettings").getBoolean("allowInsecure"))
+        assertFalse(st.getJSONObject("tlsSettings").has("allowInsecure"))
+        assertTrue(s.needsPin)
+    }
+
+    @Test fun insecureUsesPinInsteadOfAllowInsecure() {
+        val hy = parseEntry("hy2://a@h.com:443?insecure=1&pinSHA256=AB:CD:EF#H")!!
+        val tls = hy.outbound.getJSONObject("streamSettings").getJSONObject("tlsSettings")
+        assertEquals("ABCDEF", tls.getString("pinnedPeerCertSha256"))
+        assertFalse(tls.has("allowInsecure"))
+        assertFalse(hy.needsPin)
+        val tr = parseEntry("trojan://p@t.com:443?allowInsecure=1&pcs=0011#T")!!
+        assertEquals("0011", tr.outbound.getJSONObject("streamSettings").getJSONObject("tlsSettings").getString("pinnedPeerCertSha256"))
+        assertFalse(tr.needsPin)
+        assertTrue(parseEntry("trojan://p@t.com:443?allowInsecure=1#T")!!.needsPin)
+        assertFalse(parseEntry("vless://u@v.com:443?security=reality&pbk=K&insecure=1#R")!!.needsPin)
     }
 
     @Test fun garbageIsNull() {
@@ -161,6 +175,23 @@ class CoreTest {
         assertEquals("tun", c.getJSONArray("inbounds").getJSONObject(0).getString("protocol"))
         assertTrue(c.getJSONObject("routing").toString().contains("custom"))
         assertFalse(JSONObject(pingConfig(parseEntry(cfg.toString())!!)).has("inbounds"))
+    }
+
+    @Test fun hwidIsPerProviderHost() {
+        val a = hwidFor("dev1", "https://panel.one/sub/abc")
+        assertEquals(32, a.length)
+        assertTrue(a.all { it in "0123456789abcdef" })
+        assertEquals(a, hwidFor("dev1", "https://panel.one/sub/other"))
+        assertFalse(a == hwidFor("dev1", "https://panel.two/sub/abc"))
+        assertFalse(a == hwidFor("dev2", "https://panel.one/sub/abc"))
+    }
+
+    @Test fun pingHostCantBeAnOption() {
+        assertTrue(isPlainHost("example.com"))
+        assertTrue(isPlainHost("2001:db8::1"))
+        assertFalse(isPlainHost("-i0.0001"))
+        assertFalse(isPlainHost("a.com;reboot"))
+        assertFalse(isPlainHost(""))
     }
 
     @Test fun stateRoundTrip() {

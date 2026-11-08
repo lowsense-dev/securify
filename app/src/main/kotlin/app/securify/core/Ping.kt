@@ -26,6 +26,7 @@ suspend fun ping(server: Server, method: PingMethod, url: String): Long = withCo
                 (System.nanoTime() - t) / 1_000_000
             }
             PingMethod.ICMP -> {
+                require(isPlainHost(server.host))
                 val p = ProcessBuilder("ping", "-c", "1", "-W", "3", server.host).redirectErrorStream(true).start()
                 val out = p.inputStream.bufferedReader().readText()
                 p.waitFor(5, TimeUnit.SECONDS)
@@ -35,6 +36,8 @@ suspend fun ping(server: Server, method: PingMethod, url: String): Long = withCo
         }
     }.getOrDefault(-1L).let { if (it < 0) -1L else it }
 }
+
+fun isPlainHost(h: String) = h.isNotEmpty() && h[0] != '-' && h.all { it.isLetterOrDigit() || it in ".-:_" }
 
 const val PING_PENDING = -2L
 

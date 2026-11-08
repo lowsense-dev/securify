@@ -74,7 +74,7 @@ git tag v1.0.1 && git push origin v1.0.1
 | `SIGNING_KEY_ALIAS` | `securify` |
 | `SIGNING_KEY_PASSWORD` | пароль ключа |
 
-`versionCode` берётся из номера запуска workflow, `versionName` из тега.
+`versionName` берётся из тега, `versionCode` считается из него же: `v1.3.0` → `10300`. Тег должен быть вида `v1.2.3`.
 
 ## Как устроено
 
