@@ -1,5 +1,13 @@
 package app.securify.ui
 
+import android.content.ClipData
+import android.content.ClipDescription
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.os.PersistableBundle
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -68,6 +76,17 @@ fun PingLabel(ms: Long?) {
 
 @Composable
 fun subTitle(sub: Sub) = if (sub.id == MANUAL_ID) stringResource(R.string.manual_group) else sub.name
+
+fun copyText(ctx: Context, label: String, text: String, sensitive: Boolean = false) {
+    val clip = ClipData.newPlainText(label, text)
+    if (sensitive) clip.description.extras = PersistableBundle().apply { putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true) }
+    ctx.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
+    if (Build.VERSION.SDK_INT < 33) Toast.makeText(ctx, R.string.copied, Toast.LENGTH_SHORT).show()
+}
+
+fun shareText(ctx: Context, text: String) {
+    ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), null))
+}
 
 fun segmentShape(first: Boolean, last: Boolean) = RoundedCornerShape(
     topStart = if (first) 20.dp else 4.dp, topEnd = if (first) 20.dp else 4.dp,

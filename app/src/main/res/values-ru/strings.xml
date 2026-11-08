@@ -32,6 +32,9 @@
     <string name="cancel">Отмена</string>
     <string name="save">Сохранить</string>
     <string name="delete">Удалить</string>
+    <string name="copy_link">Копировать ссылку</string>
+    <string name="share">Поделиться</string>
+    <string name="copied">Скопировано</string>
     <string name="undo">Вернуть</string>
     <string name="refresh">Обновить</string>
     <string name="search">Поиск приложений</string>

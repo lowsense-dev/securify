@@ -8,6 +8,7 @@ import android.text.format.DateUtils
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,11 +32,13 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material3.AlertDialog
@@ -351,6 +354,18 @@ private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDel
                         info.webPageUrl?.let { url ->
                             DropdownMenuItem(text = { Text(stringResource(R.string.sub_web)) }, onClick = { menu = false; open(ctx, url) })
                         }
+                        if (sub.url.isNotEmpty()) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.copy_link)) },
+                                leadingIcon = { Icon(Icons.Filled.ContentCopy, null) },
+                                onClick = { menu = false; copyText(ctx, sub.name, sub.url, sensitive = true) },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.share)) },
+                                leadingIcon = { Icon(Icons.Filled.Share, null) },
+                                onClick = { menu = false; shareText(ctx, sub.url) },
+                            )
+                        }
                         DropdownMenuItem(text = { Text(stringResource(R.string.delete)) }, onClick = { menu = false; onDelete() })
                     }
                 }
@@ -409,21 +424,38 @@ private fun ServerRow(
     modifier: Modifier, onClick: () -> Unit,
 ) {
     val c = MaterialTheme.colorScheme
-    Surface(
-        onClick = onClick, shape = segmentShape(first, last),
-        color = if (selected) c.primaryContainer else c.surfaceContainer,
-        modifier = modifier.fillMaxWidth().padding(vertical = 1.dp),
-    ) {
-        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            ProtocolBadge(s.protocol, selected)
-            Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
-                Text(s.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    listOf(protocolLabel(s.protocol), s.transport, s.security).filter { it.isNotEmpty() && it != "none" }.joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
-                )
+    val ctx = LocalContext.current
+    val shape = segmentShape(first, last)
+    var menu by remember { mutableStateOf(false) }
+    Box(modifier.fillMaxWidth().padding(vertical = 1.dp)) {
+        Surface(
+            shape = shape,
+            color = if (selected) c.primaryContainer else c.surfaceContainer,
+            modifier = Modifier.fillMaxWidth().clip(shape).combinedClickable(onLongClick = { menu = true }, onClick = onClick),
+        ) {
+            Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                ProtocolBadge(s.protocol, selected)
+                Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
+                    Text(s.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        listOf(protocolLabel(s.protocol), s.transport, s.security).filter { it.isNotEmpty() && it != "none" }.joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
+                    )
+                }
+                PingLabel(ping)
             }
-            PingLabel(ping)
+        }
+        DropdownMenu(menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.copy_link)) },
+                leadingIcon = { Icon(Icons.Filled.ContentCopy, null) },
+                onClick = { menu = false; copyText(ctx, s.name, s.key, sensitive = true) },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.share)) },
+                leadingIcon = { Icon(Icons.Filled.Share, null) },
+                onClick = { menu = false; shareText(ctx, s.key) },
+            )
         }
     }
 }

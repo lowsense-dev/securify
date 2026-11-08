@@ -1,7 +1,5 @@
 package app.securify.ui
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -116,7 +114,7 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit) {
                 Item(
                     last = true, title = stringResource(R.string.hwid), summary = stringResource(R.string.hwid_hint, hwid),
                     onClick = {
-                        ctx.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("HWID", hwid))
+                        copyText(ctx, "HWID", hwid)
                     },
                     trailing = { Switch(p.hwid, { v -> Store.prefs { it.copy(hwid = v) } }) },
                 )

@@ -33,6 +33,9 @@
     <string name="cancel">Cancel</string>
     <string name="save">Save</string>
     <string name="delete">Delete</string>
+    <string name="copy_link">Copy link</string>
+    <string name="share">Share</string>
+    <string name="copied">Copied</string>
     <string name="undo">Undo</string>
     <string name="refresh">Refresh</string>
     <string name="search">Search apps</string>
