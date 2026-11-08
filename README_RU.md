@@ -45,12 +45,6 @@ APK появятся в `app/build/outputs/apk/release/`: под arm64-v8a, arme
 
 При первой сборке скачивается `libv2ray.aar` из [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite) v26.10.31, сборка проверяет его SHA-256.
 
-Тесты:
-
-```sh
-./gradlew :app:testDebugUnitTest
-```
-
 ### Подпись
 
 Release подписывается ключом из `keystore.properties` в корне проекта (файл в git не попадает):
@@ -66,7 +60,7 @@ keyPassword=...
 
 ## Релизы
 
-Тег вида `v*` запускает `.github/workflows/release.yml`. Workflow прогоняет тесты, собирает подписанные APK и публикует их в GitHub Release вместе с `SHA256SUMS`:
+Тег вида `v*` запускает `.github/workflows/release.yml`. Workflow собирает подписанные APK и публикует их в GitHub Release вместе с `SHA256SUMS`:
 
 ```sh
 git tag v1.0.1 && git push origin v1.0.1

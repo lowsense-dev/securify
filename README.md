@@ -45,12 +45,6 @@ The APKs land in `app/build/outputs/apk/release/`: arm64-v8a, armeabi-v7a, x86_6
 
 The first build downloads `libv2ray.aar` from [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite) v26.10.31 and checks its SHA-256.
 
-Tests:
-
-```sh
-./gradlew :app:testDebugUnitTest
-```
-
 ### Signing
 
 Release builds are signed with the key from `keystore.properties` in the project root (the file is not committed to git):
@@ -66,7 +60,7 @@ Instead of the file, you can set the environment variables `SIGNING_STORE_FILE`,
 
 ## Releases
 
-A tag matching `v*` triggers `.github/workflows/release.yml`. The workflow runs the tests, builds signed APKs and publishes them to a GitHub Release along with `SHA256SUMS`:
+A tag matching `v*` triggers `.github/workflows/release.yml`. The workflow builds signed APKs and publishes them to a GitHub Release along with `SHA256SUMS`:
 
 ```sh
 git tag v1.0.1 && git push origin v1.0.1

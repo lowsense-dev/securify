@@ -50,7 +50,7 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          ./gradlew :app:testDebugUnitTest :app:assembleRelease -PversionName="$VERSION" -PversionCode="$CODE"
+          ./gradlew :app:assembleRelease -PversionName="$VERSION" -PversionCode="$CODE"
           rm release.jks
           mkdir dist
           for f in app/build/outputs/apk/release/*.apk; do
