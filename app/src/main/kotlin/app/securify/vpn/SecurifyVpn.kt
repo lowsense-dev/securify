@@ -7,11 +7,14 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.net.ConnectivityManager
 import android.net.LocalSocket
+import android.net.Network
 import android.net.LocalSocketAddress
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import app.securify.R
 import app.securify.core.AppMode
 import app.securify.core.Geo
@@ -19,7 +22,9 @@ import app.securify.core.Store
 import app.securify.core.TUN_MTU
 import app.securify.core.buildConfig
 import app.securify.ui.MainActivity
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -95,7 +100,6 @@ class SecurifyVpn : VpnService() {
     private suspend fun run() {
         state.value = VpnState.Connecting
         exit.value = null
-        online.value = true
         var newTun: ParcelFileDescriptor? = null
         var newCore: CoreController? = null
         try {
@@ -143,6 +147,7 @@ class SecurifyVpn : VpnService() {
             coroutineScope {
                 launch { exit.value = lookupExit(sock) ?: getString(R.string.exit_unknown) }
                 launch { watchLink(c, st.prefs.pingUrl) }
+                launch { watchNetwork() }
                 pollTraffic(c)
             }
         } catch (e: Exception) {
@@ -156,10 +161,46 @@ class SecurifyVpn : VpnService() {
         }
     }
 
+    /** JNI and socket calls can't be cancelled, so they run outside the session and a stop doesn't wait for them. */
+    private suspend fun <T> detached(block: () -> T): T = scope.async { block() }.await()
+
+    /** Every minute, and right after the device wakes, checks the link and reconnects once with a fresh core if it died. */
     private suspend fun watchLink(c: CoreController, url: String) {
+        var last = SystemClock.elapsedRealtime()
+        // after a reconnect for a dead link, look again soon instead of in a minute
+        var checked = if (online.value) last else last - 60_000
         while (true) {
-            delay(60_000)
-            online.value = (1..2).any { runCatching { c.measureDelay(url) >= 0 }.getOrDefault(false) }
+            delay(10_000)
+            val now = SystemClock.elapsedRealtime()
+            // the delay doesn't count deep sleep, elapsedRealtime does: a big jump means we just woke up
+            val woke = now - last > 30_000
+            last = now
+            if (!woke && now - checked < 60_000) continue
+            checked = now
+            val ok = detached { runCatching { c.measureDelay(url) >= 0 }.getOrDefault(false) }
+            val was = online.value
+            online.value = ok
+            // one reconnect per outage: if a fresh core can't reach the server either, retrying in a loop won't help
+            if (!ok && was) return start(this)
+        }
+    }
+
+    /** Connections pooled on the old network are dead after Wi-Fi/mobile switches, so a new default network means a restart. */
+    private suspend fun watchNetwork() {
+        val cm = getSystemService(ConnectivityManager::class.java)
+        val first = cm.activeNetwork
+        val changed = CompletableDeferred<Unit>()
+        val cb = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                if (network != first) changed.complete(Unit)
+            }
+        }
+        cm.registerDefaultNetworkCallback(cb)
+        try {
+            changed.await()
+            start(this)
+        } finally {
+            cm.unregisterNetworkCallback(cb)
         }
     }
 
@@ -186,23 +227,22 @@ class SecurifyVpn : VpnService() {
         val lang = if (Locale.getDefault().language == "ru") "ru" else "en"
         repeat(3) { attempt ->
             if (attempt > 0) delay(1500)
-            runCatching {
-                LocalSocket().use { s ->
-                    s.connect(LocalSocketAddress(sock.path, LocalSocketAddress.Namespace.FILESYSTEM))
-                    s.soTimeout = 10_000
-                    s.outputStream.write(
-                        ("GET http://ip-api.com/json/?fields=status,country,countryCode,query&lang=$lang HTTP/1.0\r\n" +
-                            "Host: ip-api.com\r\n\r\n").toByteArray(),
-                    )
-                    val j = JSONObject(s.inputStream.readBytes().decodeToString().substringAfter("\r\n\r\n"))
-                    if (j.optString("status") == "success") {
-                        return listOf(flag(j.optString("countryCode")) + " " + j.optString("country"), j.getString("query"))
-                            .map { it.trim() }.filter { it.isNotEmpty() }.joinToString(" · ")
-                    }
-                }
-            }
+            detached { runCatching { queryExit(sock, lang) }.getOrNull() }?.let { return it }
         }
         return null
+    }
+
+    private fun queryExit(sock: File, lang: String): String? = LocalSocket().use { s ->
+        s.connect(LocalSocketAddress(sock.path, LocalSocketAddress.Namespace.FILESYSTEM))
+        s.soTimeout = 10_000
+        s.outputStream.write(
+            ("GET http://ip-api.com/json/?fields=status,country,countryCode,query&lang=$lang HTTP/1.0\r\n" +
+                "Host: ip-api.com\r\n\r\n").toByteArray(),
+        )
+        val j = JSONObject(s.inputStream.readBytes().decodeToString().substringAfter("\r\n\r\n"))
+        if (j.optString("status") != "success") return null
+        listOf(flag(j.optString("countryCode")) + " " + j.optString("country"), j.getString("query"))
+            .map { it.trim() }.filter { it.isNotEmpty() }.joinToString(" · ")
     }
 
     private fun flag(code: String) =
