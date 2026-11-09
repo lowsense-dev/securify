@@ -1,0 +1,21 @@
+[Desktop Entry]
+Type=Application
+Name=Securify
+Comment=Xray proxy client with TUN mode
+Comment[ru]=Прокси-клиент на Xray с TUN-режимом
+Exec=securify %U
+Icon=securify
+Categories=Network;
+Terminal=false
+StartupWMClass=securify
+Actions=Connect;Disconnect;
+
+[Desktop Action Connect]
+Name=Connect
+Name[ru]=Подключить
+Exec=securify --connect
+
+[Desktop Action Disconnect]
+Name=Disconnect
+Name[ru]=Отключить
+Exec=securify --disconnect

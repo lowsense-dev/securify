@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_auth">Couldn\'t get administrator rights: %s</string>
+    <string name="error_auth_cancelled">The password prompt was cancelled</string>
+    <string name="error_no_pkexec">pkexec isn\'t available. Install polkit and run a polkit agent to create the TUN interface.</string>
+    <string name="error_xray_exited">Xray stopped: %s</string>
+    <string name="error_start_timeout">Xray didn\'t start in time</string>
+    <string name="tray_open">Open Securify</string>
+    <string name="tray_quit">Quit</string>
+    <string name="import_qr_image">QR code from an image</string>
+    <string name="qr_not_found">No QR code found</string>
+    <string name="qr_images">Images</string>
+    <string name="desktop_menu">Add to the app menu</string>
+    <string name="desktop_menu_hint">Creates a launcher with Connect and Disconnect actions for this AppImage</string>
+    <string name="desktop_menu_done">Added to the app menu</string>
+    <string name="apps_process_hint">Matched by process name, like firefox. An app started through a wrapper script may run under another name.</string>
+    <string name="apps_add">Add a process</string>
+    <string name="apps_add_hint">Process name or full path</string>
+    <string name="tun_password_hint">Connecting asks for the administrator password: Xray needs root to create the TUN interface</string>
+    <string name="update_restart">Restarting into the new version…</string>
+    <string name="copy_log">Copy the log</string>
+    <string name="password_title">Administrator password</string>
+    <string name="password_wrong">Wrong password, try again</string>
+</resources>

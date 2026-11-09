@@ -10,7 +10,7 @@ import kotlin.concurrent.thread
 
 class SubUpdateJob : JobService() {
     override fun onStartJob(params: JobParameters): Boolean {
-        thread { Subs.refreshDue(this); jobFinished(params, false) }
+        thread { Subs.refreshDue(); jobFinished(params, false) }
         return true
     }
 

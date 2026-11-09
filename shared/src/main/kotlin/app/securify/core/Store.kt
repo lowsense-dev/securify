@@ -1,6 +1,5 @@
 package app.securify.core
 
-import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.updateAndGet
 import org.json.JSONArray
@@ -88,8 +87,8 @@ object Store {
     private lateinit var file: File
     private val io = Executors.newSingleThreadExecutor()
 
-    fun init(ctx: Context) {
-        file = File(ctx.filesDir, "state.json")
+    fun init(dir: File) {
+        file = File(dir, "state.json")
         if (file.exists()) runCatching { state.value = decode(JSONObject(file.readText())) }
     }
 

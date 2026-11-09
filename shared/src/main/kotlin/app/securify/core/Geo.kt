@@ -1,9 +1,8 @@
 package app.securify.core
 
-import android.content.Context
-import app.securify.BuildConfig
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.DigestOutputStream
@@ -15,41 +14,41 @@ enum class GeoSource(val base: String?) {
     RUNETFREEDOM("https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/"),
 }
 
+/** The bundled files come from the APK assets on Android and from the AppImage on Linux, through [bundled]. */
 object Geo {
-    private val names = listOf("geoip.dat", "geosite.dat")
+    val names = listOf("geoip.dat", "geosite.dat")
     private const val DOWNLOADED = "downloaded"
 
-    /** Xray's geodata loader stats real files, so the geoip/geosite bundled in the APK must be copied to disk. */
+    /** Xray's geodata loader stats real files, so the bundled geoip/geosite must be copied to disk. */
     @Synchronized
-    fun ensure(ctx: Context) {
-        val stamp = File(ctx.filesDir, "geo.version")
-        val version = BuildConfig.VERSION_CODE.toString()
+    fun ensure(dir: File, version: String, bundled: (String) -> InputStream) {
+        val stamp = File(dir, "geo.version")
         if (stamp.exists() && stamp.readText().let { it == version || it == DOWNLOADED }) return
         for (name in names) {
-            val tmp = File(ctx.filesDir, "$name.tmp")
-            ctx.assets.open(name).use { i -> tmp.outputStream().use { i.copyTo(it) } }
-            tmp.renameTo(File(ctx.filesDir, name))
+            val tmp = File(dir, "$name.tmp")
+            bundled(name).use { i -> tmp.outputStream().use { i.copyTo(it) } }
+            tmp.renameTo(File(dir, name))
         }
         stamp.writeText(version)
     }
 
     /** Downloads both files and swaps them in only if every checksum matches. */
     @Synchronized
-    fun update(ctx: Context, source: GeoSource) {
-        val stamp = File(ctx.filesDir, "geo.version")
+    fun update(dir: File, source: GeoSource, version: String, bundled: (String) -> InputStream) {
+        val stamp = File(dir, "geo.version")
         val base = source.base ?: run {
             stamp.delete()
-            ensure(ctx)
+            ensure(dir, version, bundled)
             return Store.prefs { it.copy(geo = source, geoUpdated = 0) }
         }
         val files = names.map { name ->
             val want = get(base + name + ".sha256sum") { it.readBytes() }.decodeToString().trim().substringBefore(' ').lowercase()
-            val tmp = File(ctx.filesDir, "$name.dl")
+            val tmp = File(dir, "$name.dl")
             val md = MessageDigest.getInstance("SHA-256")
             get(base + name) { i -> DigestOutputStream(tmp.outputStream(), md).use { i.copyTo(it) } }
             val got = md.digest().joinToString("") { "%02x".format(it) }
             if (got != want) { tmp.delete(); throw IOException("$name: checksum mismatch") }
-            tmp to File(ctx.filesDir, name)
+            tmp to File(dir, name)
         }
         files.forEach { (tmp, dst) -> tmp.renameTo(dst) }
         stamp.writeText(DOWNLOADED)

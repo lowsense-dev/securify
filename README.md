@@ -2,7 +2,7 @@
 
 **English** | [Русский](README_RU.md)
 
-An Android proxy client with TUN mode, built on the [Xray](https://github.com/XTLS/Xray-core) core. It supports subscriptions with HWID and uses a Material 3 Expressive design.
+A proxy client with TUN mode for Android and Linux, built on the [Xray](https://github.com/XTLS/Xray-core) core. It supports subscriptions with HWID and uses a Material 3 Expressive design.
 
 ## Features
 
@@ -33,6 +33,23 @@ An Android proxy client with TUN mode, built on the [Xray](https://github.com/XT
 - **Monet:** app and icon colors follow the wallpaper. Themed icon on Android 13+.
 - **Languages:** English and Russian, picked from the system language.
 
+## Linux
+
+The Linux version is an AppImage with the same features and look: `securify-<version>-x86_64.AppImage` from [Releases](../../releases).
+
+```sh
+chmod +x securify-*-x86_64.AppImage && ./securify-*-x86_64.AppImage
+```
+
+- Xray creates the TUN interface `securify0` itself, so connecting needs root. The app asks once per session through polkit (`pkexec`). If no polkit agent is running, as on many tiling WMs, it asks for the password itself and uses `sudo`.
+- Xray and the geo files are copied to `~/.local/share/securify`, where root can read them. Settings, subscriptions and the HWID live there too.
+- Per-app split tunneling matches process names (`firefox`), picked from installed apps or typed by hand.
+- The window follows the system dark mode and accent color through the XDG portal. Closing it hides the app to the tray: StatusNotifierItem (KDE, Waybar, Quickshell, GNOME with AppIndicator) or a classic X11 tray. The tray menu connects, disconnects and quits.
+- "Add to the app menu" in Settings creates a launcher with Connect and Disconnect actions. `--connect` and `--disconnect` also work from a terminal.
+- Updates download the new AppImage, check it against `SHA256SUMS`, and replace the running file.
+
+Needs glibc x86_64, FUSE 2 (or `--appimage-extract-and-run`), and polkit or sudo.
+
 ## Building
 
 Requires JDK 21 and the Android SDK (compileSdk 37).
@@ -42,6 +59,14 @@ Requires JDK 21 and the Android SDK (compileSdk 37).
 ```
 
 The APKs land in `app/build/outputs/apk/release/`: arm64-v8a, armeabi-v7a, x86_64 and universal.
+
+The Linux AppImage is built with:
+
+```sh
+./gradlew :desktop:appImage
+```
+
+It lands in `desktop/build/appimage/`. The build downloads Xray-linux-64 and the pinned appimagetool and checks their SHA-256.
 
 The first build downloads `libv2ray.aar` from [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite) v26.10.31 and checks its SHA-256.
 
@@ -60,7 +85,7 @@ Instead of the file, you can set the environment variables `SIGNING_STORE_FILE`,
 
 ## Releases
 
-A tag matching `v*` triggers `.github/workflows/release.yml`. The workflow builds signed APKs and publishes them to a GitHub Release along with `SHA256SUMS`:
+A tag matching `v*` triggers `.github/workflows/release.yml`. The workflow builds signed APKs and the Linux AppImage, then publishes them to a GitHub Release along with `SHA256SUMS`:
 
 ```sh
 git tag v1.0.1 && git push origin v1.0.1
@@ -81,10 +106,11 @@ Required repository secrets:
 
 ## How it works
 
-- `core/`: link and subscription parsing, Xray config building, storage, ping.
+- `shared/` (`core/`): link and subscription parsing, Xray config building, storage, ping, geo files and updates. Both apps use it.
 - `vpn/SecurifyVpn`: brings up the TUN interface and hands its fd to Xray (`CoreController.startLoop`). The app itself is excluded from the VPN, otherwise Xray's outbound traffic would loop back into the tunnel.
 - The exit IP is looked up from ip-api.com through a separate Xray HTTP inbound. That inbound listens on a unix socket in the app's private directory, so other apps can't use it.
 - `ui/`: Jetpack Compose with Material 3 Expressive.
+- `desktop/`: the Linux app in Compose Multiplatform. A root helper started through pkexec or sudo runs Xray with its own TUN inbound (`autoSystemRoutingTable`, `autoOutboundsInterface`). The exit IP check uses a unix socket the same way.
 
 ## Limitations
 
@@ -92,6 +118,10 @@ Required repository secrets:
 - Shadowsocks plugins (obfs, v2ray-plugin) are not supported.
 - Subscriptions are downloaded outside the VPN.
 - The ip-api.com request goes over plain HTTP, without encryption.
+- Linux: without systemd-resolved, DNS queries are caught on port 53 inside the tunnel instead of being set system-wide.
+- Linux: switching servers restarts Xray, so connections drop for a moment.
+- Linux: Flatpak and Snap apps don't show up in the per-app list; add their process names by hand.
+- Linux: while connected, TCP ping becomes ICMP, because Xray would answer the TCP handshake itself.
 
 ## License
 

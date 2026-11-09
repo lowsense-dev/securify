@@ -151,7 +151,7 @@ fun ServersScreen(modifier: Modifier) {
         if (text.isNullOrBlank()) return
         scope.launch {
             importing = true
-            val msg = runCatching { withContext(Dispatchers.IO) { Subs.import(ctx, text) } }.fold(
+            val msg = runCatching { withContext(Dispatchers.IO) { Subs.import(text) } }.fold(
                 onSuccess = {
                     when (it) {
                         is Subs.Imported.Subscription -> { pageId = it.id; ctx.getString(R.string.imported_sub, it.name, it.servers) }
@@ -170,7 +170,7 @@ fun ServersScreen(modifier: Modifier) {
         scope.launch {
             refreshing = refreshing + subs.map { it.id }
             val failed = subs.firstNotNullOfOrNull { s ->
-                runCatching { withContext(Dispatchers.IO) { Subs.refresh(ctx, s) } }.exceptionOrNull()?.let { s to it }
+                runCatching { withContext(Dispatchers.IO) { Subs.refresh(s) } }.exceptionOrNull()?.let { s to it }
             }
             refreshing = refreshing - subs.map { it.id }.toSet()
             failed?.let { (s, e) -> snack.showSnackbar(ctx.getString(R.string.refresh_failed, s.name, e.message ?: e.toString())) }
@@ -439,7 +439,7 @@ private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDel
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.copy_hwid)) },
                                 leadingIcon = { Icon(Icons.Filled.Fingerprint, null) },
-                                onClick = { menu = false; copyText(ctx, "HWID", Subs.hwid(ctx, sub.url)) },
+                                onClick = { menu = false; copyText(ctx, "HWID", Subs.hwid(sub.url)) },
                             )
                         }
                         DropdownMenuItem(text = { Text(stringResource(R.string.delete)) }, onClick = { menu = false; onDelete() })

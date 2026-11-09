@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import libv2ray.Libv2ray
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -16,9 +15,20 @@ import java.util.concurrent.TimeUnit
 
 private const val TIMEOUT_MS = 3000
 
+/** Android measures the real delay in-process with libv2ray, the desktop app with a short-lived Xray. */
+object PingHooks {
+    var real: (Server, String) -> Long = { _, _ -> -1L }
+
+    /** Extra `ping` arguments, e.g. the physical interface while a desktop tunnel would answer ICMP itself. */
+    var icmpArgs: () -> List<String> = { emptyList() }
+
+    /** False while a TCP connect would be answered by the local tunnel instead of the server. */
+    var tcpReal: () -> Boolean = { true }
+}
+
 suspend fun ping(server: Server, method: PingMethod, url: String): Long = withContext(Dispatchers.IO) {
     runCatching {
-        when (if (method == PingMethod.TCP && server.isUdp) PingMethod.ICMP else method) {
+        when (if (method == PingMethod.TCP && (server.isUdp || !PingHooks.tcpReal())) PingMethod.ICMP else method) {
             PingMethod.TCP -> {
                 val addr = InetAddress.getByName(server.host)
                 val t = System.nanoTime()
@@ -27,12 +37,13 @@ suspend fun ping(server: Server, method: PingMethod, url: String): Long = withCo
             }
             PingMethod.ICMP -> {
                 require(isPlainHost(server.host))
-                val p = ProcessBuilder("ping", "-c", "1", "-W", "3", server.host).redirectErrorStream(true).start()
+                val p = ProcessBuilder(listOf("ping", "-c", "1", "-W", "3") + PingHooks.icmpArgs() + server.host)
+                    .redirectErrorStream(true).start()
                 val out = p.inputStream.bufferedReader().readText()
                 p.waitFor(5, TimeUnit.SECONDS)
                 Regex("time=([\\d.]+)").find(out)!!.groupValues[1].toDouble().toLong().coerceAtLeast(1)
             }
-            PingMethod.REAL -> Libv2ray.measureOutboundDelay(pingConfig(server), url)
+            PingMethod.REAL -> PingHooks.real(server, url)
         }
     }.getOrDefault(-1L).let { if (it < 0) -1L else it }
 }

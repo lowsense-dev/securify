@@ -2,7 +2,7 @@
 
 [English](README.md) | **Русский**
 
-Android-клиент для прокси с TUN-режимом на ядре [Xray](https://github.com/XTLS/Xray-core), с поддержкой подписок и HWID, в дизайне Material 3 Expressive.
+Клиент для прокси с TUN-режимом для Android и Linux на ядре [Xray](https://github.com/XTLS/Xray-core), с поддержкой подписок и HWID, в дизайне Material 3 Expressive.
 
 ## Возможности
 
@@ -33,6 +33,23 @@ Android-клиент для прокси с TUN-режимом на ядре [Xr
 - **Monet:** цвета приложения и иконки берутся из обоев, есть themed-иконка (Android 13+).
 - **Язык:** русский и английский, выбирается по языку системы.
 
+## Linux
+
+Версия для Linux — AppImage с теми же функциями и дизайном: `securify-<версия>-x86_64.AppImage` в [Releases](../../releases).
+
+```sh
+chmod +x securify-*-x86_64.AppImage && ./securify-*-x86_64.AppImage
+```
+
+- Xray сам создаёт TUN-интерфейс `securify0`, поэтому для подключения нужен root. Приложение спрашивает пароль один раз за сеанс через polkit (`pkexec`). Если агента polkit нет, как во многих тайловых WM, пароль спрашивает само приложение и запускает `sudo`.
+- Xray и geo-файлы копируются в `~/.local/share/securify`, откуда их может читать root. Там же лежат настройки, подписки и HWID.
+- Раздельное туннелирование работает по имени процесса (`firefox`): его можно выбрать из установленных приложений или ввести вручную.
+- Окно берёт тёмную тему и акцентный цвет системы через XDG portal. При закрытии приложение сворачивается в трей: StatusNotifierItem (KDE, Waybar, Quickshell, GNOME с AppIndicator) или классический трей X11. В меню трея можно подключиться, отключиться и выйти.
+- Пункт «Добавить в меню приложений» в настройках создаёт ярлык с действиями «Подключить» и «Отключить». Из терминала работают `--connect` и `--disconnect`.
+- Обновление скачивает новый AppImage, сверяет его с `SHA256SUMS` и заменяет запущенный файл.
+
+Нужны glibc x86_64, FUSE 2 (или `--appimage-extract-and-run`) и polkit или sudo.
+
 ## Сборка
 
 Нужны JDK 21 и Android SDK (compileSdk 37).
@@ -42,6 +59,14 @@ Android-клиент для прокси с TUN-режимом на ядре [Xr
 ```
 
 APK появятся в `app/build/outputs/apk/release/`: под arm64-v8a, armeabi-v7a, x86_64 и universal.
+
+AppImage для Linux собирается так:
+
+```sh
+./gradlew :desktop:appImage
+```
+
+Он появится в `desktop/build/appimage/`. Сборка скачивает Xray-linux-64 и закреплённую версию appimagetool и проверяет их SHA-256.
 
 При первой сборке скачивается `libv2ray.aar` из [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite) v26.10.31, сборка проверяет его SHA-256.
 
@@ -60,7 +85,7 @@ keyPassword=...
 
 ## Релизы
 
-Тег вида `v*` запускает `.github/workflows/release.yml`. Workflow собирает подписанные APK и публикует их в GitHub Release вместе с `SHA256SUMS`:
+Тег вида `v*` запускает `.github/workflows/release.yml`. Workflow собирает подписанные APK и AppImage для Linux и публикует их в GitHub Release вместе с `SHA256SUMS`:
 
 ```sh
 git tag v1.0.1 && git push origin v1.0.1
@@ -81,10 +106,11 @@ git tag v1.0.1 && git push origin v1.0.1
 
 ## Как устроено
 
-- `core/`: парсер ссылок и подписок, сборка конфига Xray, хранилище, пинг.
+- `shared/` (`core/`): парсер ссылок и подписок, сборка конфига Xray, хранилище, пинг, geo-файлы и обновления. Общий для обоих приложений.
 - `vpn/SecurifyVpn`: поднимает TUN и передаёт его fd в Xray (`CoreController.startLoop`). Само приложение исключено из VPN, иначе исходящий трафик Xray зациклится.
 - Внешний IP определяется запросом к ip-api.com через отдельный HTTP-инбаунд Xray. Инбаунд слушает unix-сокет в приватной папке приложения, поэтому сторонние приложения не могут им воспользоваться.
 - `ui/`: Jetpack Compose и Material 3 Expressive.
+- `desktop/`: приложение для Linux на Compose Multiplatform. Root-помощник, запущенный через pkexec или sudo, запускает Xray с его собственным TUN-инбаундом (`autoSystemRoutingTable`, `autoOutboundsInterface`). Внешний IP проверяется через unix-сокет так же, как на Android.
 
 ## Ограничения
 
@@ -92,6 +118,10 @@ git tag v1.0.1 && git push origin v1.0.1
 - Shadowsocks с плагинами (obfs, v2ray-plugin) не поддерживается.
 - Подписки скачиваются в обход VPN.
 - Запрос к ip-api.com идёт по HTTP, без шифрования.
+- Linux: без systemd-resolved DNS-запросы перехватываются на порту 53 внутри туннеля, а не настраиваются для всей системы.
+- Linux: при смене сервера Xray перезапускается, соединения на мгновение рвутся.
+- Linux: приложения из Flatpak и Snap не попадают в список раздельного туннелирования, их процессы добавляются вручную.
+- Linux: при подключении TCP-пинг заменяется на ICMP, потому что TCP-рукопожатие Xray завершил бы сам.
 
 ## Лицензия
 

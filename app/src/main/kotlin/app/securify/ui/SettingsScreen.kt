@@ -80,7 +80,7 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit, onRules: () -> Unit, 
         geoBusy = true
         scope.launch {
             // finishes even if the screen goes away, so the files on disk and the saved source stay in sync
-            runCatching { withContext(Dispatchers.IO + NonCancellable) { Geo.update(ctx, src); restart() } }.onFailure {
+            runCatching { withContext(Dispatchers.IO + NonCancellable) { Geo.update(ctx.filesDir, src, BuildConfig.VERSION_CODE.toString()) { ctx.assets.open(it) }; restart() } }.onFailure {
                 if (it !is CancellationException) Toast.makeText(ctx, ctx.getString(R.string.geo_failed, it.message ?: it.toString()), Toast.LENGTH_LONG).show()
             }
             geoBusy = false
@@ -266,7 +266,7 @@ private fun UpdateItem() {
         },
         onClick = {
             when (val s = u) {
-                is UpdateState.Available -> if (ctx.packageManager.canRequestPackageInstalls()) Updater.install(ctx.applicationContext, s.release)
+                is UpdateState.Available -> if (ctx.packageManager.canRequestPackageInstalls()) Updater.install(s.release)
                 else {
                     Toast.makeText(ctx, R.string.update_allow, Toast.LENGTH_LONG).show()
                     runCatching {

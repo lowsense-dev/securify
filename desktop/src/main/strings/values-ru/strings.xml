@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_auth">Не удалось получить права администратора: %s</string>
+    <string name="error_auth_cancelled">Ввод пароля отменён</string>
+    <string name="error_no_pkexec">Нет pkexec. Установите polkit и запустите polkit-агент, чтобы создать TUN-интерфейс.</string>
+    <string name="error_xray_exited">Xray остановился: %s</string>
+    <string name="error_start_timeout">Xray не запустился вовремя</string>
+    <string name="tray_open">Открыть Securify</string>
+    <string name="tray_quit">Выйти</string>
+    <string name="import_qr_image">QR-код из картинки</string>
+    <string name="qr_not_found">QR-код не найден</string>
+    <string name="qr_images">Изображения</string>
+    <string name="desktop_menu">Добавить в меню приложений</string>
+    <string name="desktop_menu_hint">Создаёт ярлык с действиями «Подключить» и «Отключить» для этого AppImage</string>
+    <string name="desktop_menu_done">Добавлено в меню приложений</string>
+    <string name="apps_process_hint">Сопоставляется по имени процесса, например firefox. Приложение, запущенное через скрипт-обёртку, может работать под другим именем.</string>
+    <string name="apps_add">Добавить процесс</string>
+    <string name="apps_add_hint">Имя процесса или полный путь</string>
+    <string name="tun_password_hint">При подключении нужен пароль администратора: Xray создаёт TUN-интерфейс от root</string>
+    <string name="update_restart">Перезапускаю новую версию…</string>
+    <string name="copy_log">Скопировать журнал</string>
+    <string name="password_title">Пароль администратора</string>
+    <string name="password_wrong">Неверный пароль, попробуйте ещё раз</string>
+</resources>

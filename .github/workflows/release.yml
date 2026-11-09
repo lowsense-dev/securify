@@ -50,18 +50,19 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          ./gradlew :app:assembleRelease -PversionName="$VERSION" -PversionCode="$CODE"
+          ./gradlew :app:assembleRelease :desktop:appImage -PversionName="$VERSION" -PversionCode="$CODE"
           rm release.jks
           mkdir dist
           for f in app/build/outputs/apk/release/*.apk; do
             abi=$(basename "$f" .apk | sed 's/^app-//; s/-release$//')
             cp "$f" "dist/securify-$VERSION-$abi.apk"
           done
-          (cd dist && sha256sum *.apk > SHA256SUMS)
+          cp "desktop/build/appimage/securify-$VERSION-x86_64.AppImage" dist/
+          (cd dist && sha256sum *.apk *.AppImage > SHA256SUMS)
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: securify-apk
+          name: securify-dist
           path: dist/
 
   publish:
@@ -73,7 +74,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: securify-apk
+          name: securify-dist
           path: dist
 
       - name: Publish release

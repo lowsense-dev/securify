@@ -1,10 +1,5 @@
 package app.securify.core
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.os.Build
-import android.provider.Settings
-import app.securify.BuildConfig
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
@@ -52,26 +47,24 @@ fun hwidFor(deviceId: String, url: String): String {
 }
 
 object Subs {
-    @SuppressLint("HardwareIds")
-    fun hwid(ctx: Context, url: String): String =
-        hwidFor(Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ANDROID_ID), url)
+    fun hwid(url: String): String = hwidFor(Platform.deviceId, url)
 
-    fun fetch(ctx: Context, url: String, id: String = UUID.randomUUID().toString()): Sub {
+    fun fetch(url: String, id: String = UUID.randomUUID().toString()): Sub {
         val c = URL(url).openConnection() as HttpURLConnection
         try {
             c.connectTimeout = 15_000
             c.readTimeout = 20_000
             c.setRequestProperty("User-Agent", when (Store.state.value.prefs.agent) {
-                SubAgent.SECURIFY -> "Securify/${BuildConfig.VERSION_NAME}"
+                SubAgent.SECURIFY -> "Securify/${Platform.appVersion}"
                 SubAgent.V2RAYNG -> "v2rayNG/1.10.24"
                 SubAgent.HAPP -> "Happ/3.2.1"
             })
             c.setRequestProperty("Accept", "*/*")
             if (Store.state.value.prefs.hwid) {
-                c.setRequestProperty("x-hwid", hwid(ctx, url))
-                c.setRequestProperty("x-device-os", "Android")
-                c.setRequestProperty("x-ver-os", Build.VERSION.RELEASE)
-                c.setRequestProperty("x-device-model", Build.MODEL)
+                c.setRequestProperty("x-hwid", hwid(url))
+                c.setRequestProperty("x-device-os", Platform.os)
+                c.setRequestProperty("x-ver-os", Platform.osVersion)
+                c.setRequestProperty("x-device-model", Platform.model)
             }
             val code = c.responseCode
             if (code !in 200..299) throw IOException("HTTP $code")
@@ -92,13 +85,13 @@ object Subs {
         }
     }
 
-    fun refresh(ctx: Context, sub: Sub) = Store.putSub(fetch(ctx, sub.url, sub.id))
+    fun refresh(sub: Sub) = Store.putSub(fetch(sub.url, sub.id))
 
-    fun refreshDue(ctx: Context) {
+    fun refreshDue() {
         val now = System.currentTimeMillis()
         Store.state.value.subs.filter { it.url.isNotEmpty() }.forEach { sub ->
             val every = (sub.info.intervalHours.takeIf { it > 0 } ?: 24) * 3_600_000L
-            if (now - sub.updatedAt >= every) runCatching { refresh(ctx, sub) }
+            if (now - sub.updatedAt >= every) runCatching { refresh(sub) }
         }
     }
 
@@ -108,12 +101,12 @@ object Subs {
         data object Nothing : Imported
     }
 
-    fun import(ctx: Context, text: String): Imported {
+    fun import(text: String): Imported {
         val t = text.trim()
         val urls = t.lines().map { it.trim() }.filter { it.startsWith("http://") || it.startsWith("https://") }
         if (urls.isNotEmpty()) {
             val existing = Store.state.value.subs.associateBy { it.url }
-            val subs = urls.map { u -> fetch(ctx, u, existing[u]?.id ?: UUID.randomUUID().toString()) }
+            val subs = urls.map { u -> fetch(u, existing[u]?.id ?: UUID.randomUUID().toString()) }
             subs.forEach(Store::putSub)
             return Imported.Subscription(subs.first().id, subs.first().name, subs.sumOf { it.servers.size })
         }

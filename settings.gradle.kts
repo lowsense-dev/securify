@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "Securify"
-include(":app")
+include(":app", ":shared", ":desktop")

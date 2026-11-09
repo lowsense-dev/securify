@@ -15,6 +15,7 @@ import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
+import app.securify.BuildConfig
 import app.securify.R
 import app.securify.core.AppMode
 import app.securify.core.Geo
@@ -109,7 +110,7 @@ class SecurifyVpn : VpnService() {
             check(!server.needsPin) { getString(R.string.error_insecure) }
             val sock = File(filesDir, "ipcheck-${System.currentTimeMillis()}.sock")
             val config = buildConfig(server, st.prefs, sock.path, Store.pings.value)
-            Geo.ensure(this@SecurifyVpn)
+            Geo.ensure(filesDir, BuildConfig.VERSION_CODE.toString()) { assets.open(it) }
             val b = Builder()
                 .setSession(server.name)
                 .setMtu(TUN_MTU)
