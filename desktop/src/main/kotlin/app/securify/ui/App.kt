@@ -49,6 +49,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.focus.FocusRequester
@@ -72,7 +74,9 @@ private val tabs = listOf(
 @Composable
 fun SecurifyApp() {
     BoxWithConstraints {
-        CompositionLocalProvider(LocalLandscape provides (maxWidth > maxHeight && maxWidth >= 600.dp)) { Content() }
+        val landscape = maxWidth > maxHeight && maxWidth >= 600.dp
+        // wider than half a screen: the server list sits next to the shield instead of in its own tab
+        CompositionLocalProvider(LocalLandscape provides landscape) { Content(wide = landscape && maxWidth >= 1000.dp) }
     }
     SecurifyVpn.passwordPrompt.collectAsState().value?.let { PasswordDialog(it) }
 }
@@ -109,10 +113,13 @@ private fun PasswordDialog(prompt: PasswordPrompt) {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun Content() {
-    val pager = rememberPagerState { tabs.size }
+private fun Content(wide: Boolean) {
+    val shown = if (wide) listOf(0, 2) else listOf(0, 1, 2)
+    var current by rememberSaveable { mutableStateOf(0) }
+    val pager = key(wide) { rememberPagerState(initialPage = shown.indexOf(current).coerceAtLeast(0)) { shown.size } }
+    LaunchedEffect(pager) { snapshotFlow { pager.targetPage }.collect { current = shown[it] } }
     val scope = rememberCoroutineScope()
-    val go = { i: Int -> scope.launch { pager.animateScrollToPage(i) }; Unit }
+    val go = { tab: Int -> scope.launch { pager.animateScrollToPage(shown.indexOf(tab).coerceAtLeast(0)) }; Unit }
     var overlay by rememberSaveable { mutableStateOf<String?>(null) }
 
     val toggle = { if (SecurifyVpn.isActive) SecurifyVpn.stop() else SecurifyVpn.start() }
@@ -129,8 +136,11 @@ private fun Content() {
 
     val pages = @Composable { m: Modifier ->
         HorizontalPager(pager, m) { i ->
-            when (i) {
-                0 -> HomeScreen(Modifier, onToggle = toggle, onServers = { go(1) })
+            when (shown[i]) {
+                0 -> if (wide) Row(Modifier.fillMaxSize()) {
+                    ServersScreen(Modifier.weight(1f), split = true)
+                    HomeScreen(Modifier.weight(1f), onToggle = toggle, onServers = null)
+                } else HomeScreen(Modifier, onToggle = toggle, onServers = { go(1) })
                 1 -> ServersScreen(Modifier)
                 else -> SettingsScreen(Modifier, onApps = { overlay = "apps" }, onRules = { overlay = "rules" }, onLogs = { overlay = "logs" })
             }
@@ -141,10 +151,11 @@ private fun Content() {
         Surface(color = MaterialTheme.colorScheme.surface) { Row(Modifier.fillMaxSize()) {
             NavigationRail(Modifier.fillMaxHeight(), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                 Spacer(Modifier.weight(1f))
-                tabs.forEachIndexed { i, t ->
+                shown.forEachIndexed { i, tab ->
+                    val t = tabs[tab]
                     NavigationRailItem(
                         selected = pager.targetPage == i,
-                        onClick = { go(i) },
+                        onClick = { go(tab) },
                         icon = { Icon(if (pager.targetPage == i) t.on else t.off, null) },
                         label = { Text(stringResource(t.label)) },
                     )
@@ -158,10 +169,11 @@ private fun Content() {
             contentWindowInsets = WindowInsets(0),
             bottomBar = {
                 ShortNavigationBar {
-                    tabs.forEachIndexed { i, t ->
+                    shown.forEachIndexed { i, tab ->
+                        val t = tabs[tab]
                         ShortNavigationBarItem(
                             selected = pager.targetPage == i,
-                            onClick = { go(i) },
+                            onClick = { go(tab) },
                             icon = { Icon(if (pager.targetPage == i) t.on else t.off, null) },
                             label = { Text(stringResource(t.label)) },
                         )

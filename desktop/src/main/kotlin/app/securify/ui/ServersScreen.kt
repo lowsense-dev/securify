@@ -112,7 +112,8 @@ import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ServersScreen(modifier: Modifier) {
+/** [split]: shown as a pane next to the home screen, so the list fills it with even margins. */
+fun ServersScreen(modifier: Modifier, split: Boolean = false) {
     val app by Store.state.collectAsState()
     val pings by Store.pings.collectAsState()
     val scope = rememberCoroutineScope()
@@ -254,7 +255,10 @@ fun ServersScreen(modifier: Modifier) {
                     modifier = Modifier.fillMaxSize(),
                     indicator = { PullToRefreshDefaults.LoadingIndicator(state = pull, isRefreshing = pulling, modifier = Modifier.align(Alignment.TopCenter)) },
                 ) {
-                    LazyColumn(Modifier.centeredContent(), contentPadding = PaddingValues(start = 16.dp, end = if (landscape) 104.dp else 16.dp, bottom = 120.dp)) {
+                    LazyColumn(
+                        if (split) Modifier.fillMaxSize() else Modifier.centeredContent(),
+                        contentPadding = PaddingValues(start = 16.dp, end = if (landscape && !split) 104.dp else 16.dp, bottom = 120.dp),
+                    ) {
                         item(key = "sub:" + sub.id) {
                             SubPanel(
                                 sub,

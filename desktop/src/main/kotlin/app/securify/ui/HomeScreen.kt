@@ -13,9 +13,9 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -85,10 +85,10 @@ import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun HomeScreen(modifier: Modifier, onToggle: () -> Unit, onServers: () -> Unit) {
+fun HomeScreen(modifier: Modifier, onToggle: () -> Unit, onServers: (() -> Unit)?) {
     val vpn by SecurifyVpn.state.collectAsState()
 
-    BoxWithConstraints(modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+    BoxWithConstraints(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         val height = maxHeight
         if (maxWidth > maxHeight) {
             Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
@@ -152,16 +152,15 @@ private fun Connection(vpn: VpnState) {
 }
 
 @Composable
-private fun ServerCard(onClick: () -> Unit) {
+/** With no [onClick] the server list is already on screen, so the card only shows the pick. */
+private fun ServerCard(onClick: (() -> Unit)?) {
     val app by Store.state.collectAsState()
     val pings by Store.pings.collectAsState()
     val server = app.selected
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = Modifier.fillMaxWidth().widthIn(max = 560.dp),
-    ) {
+    val shape = RoundedCornerShape(28.dp)
+    val color = MaterialTheme.colorScheme.surfaceContainerHigh
+    val m = Modifier.fillMaxWidth().widthIn(max = 560.dp)
+    val content = @Composable {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             if (server == null) {
                 Icon(Icons.Filled.Add, null, Modifier.padding(horizontal = 10.dp))
@@ -180,9 +179,10 @@ private fun ServerCard(onClick: () -> Unit) {
                 }
                 PingLabel(pings[server.key])
             }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (onClick != null) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+    if (onClick != null) Surface(onClick, m, shape = shape, color = color) { content() } else Surface(m, shape = shape, color = color) { content() }
 }
 
 private class MorphShape(private val morph: Morph, private val progress: Float) : Shape {
