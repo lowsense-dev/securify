@@ -22,7 +22,6 @@ import app.securify.core.Store
 import app.securify.core.TUN_MTU
 import app.securify.core.buildConfig
 import app.securify.ui.MainActivity
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +29,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -84,6 +84,7 @@ class SecurifyVpn : VpnService() {
     private var session: Job? = null
     private var tun: ParcelFileDescriptor? = null
     private var core: CoreController? = null
+    private var lastAutoRestart = 0L
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -181,27 +182,36 @@ class SecurifyVpn : VpnService() {
             val was = online.value
             online.value = ok
             // one reconnect per outage: if a fresh core can't reach the server either, retrying in a loop won't help
-            if (!ok && was) return start(this)
+            if (!ok && was) autoRestart()
         }
     }
 
     /** Connections pooled on the old network are dead after Wi-Fi/mobile switches, so a new default network means a restart. */
     private suspend fun watchNetwork() {
         val cm = getSystemService(ConnectivityManager::class.java)
-        val first = cm.activeNetwork
-        val changed = CompletableDeferred<Unit>()
+        val changes = Channel<Unit>(Channel.CONFLATED)
         val cb = object : ConnectivityManager.NetworkCallback() {
+            var current: Network? = null
             override fun onAvailable(network: Network) {
-                if (network != first) changed.complete(Unit)
+                // the first call reports the network we're already on; activeNetwork can't be the baseline, it is null while the app is restricted
+                if (current != null && network != current) changes.trySend(Unit)
+                current = network
             }
         }
         cm.registerDefaultNetworkCallback(cb)
         try {
-            changed.await()
-            start(this)
+            for (c in changes) autoRestart()
         } finally {
             cm.unregisterNetworkCallback(cb)
         }
+    }
+
+    /** At most one automatic reconnect a minute, so no trigger can put the tunnel into a reconnect loop. */
+    private fun autoRestart() {
+        val now = SystemClock.elapsedRealtime()
+        if (lastAutoRestart != 0L && now - lastAutoRestart < 60_000) return
+        lastAutoRestart = now
+        start(this)
     }
 
     private suspend fun pollTraffic(c: CoreController) {
