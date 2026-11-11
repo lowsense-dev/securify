@@ -25,6 +25,7 @@
     <string name="ping_fail">нет ответа</string>
     <string name="ping_ms">%1$d мс</string>
     <string name="ping_all">Пинг всех</string>
+    <string name="ping_stop">Остановить пинг</string>
     <string name="sort">Сортировка</string>
     <string name="sort_origin">Как в подписке</string>
     <string name="sort_name">По названию</string>

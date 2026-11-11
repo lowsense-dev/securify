@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -98,6 +99,7 @@ import app.securify.core.Subs
 import app.securify.core.MANUAL_ID
 import app.securify.core.PING_PENDING
 import app.securify.core.pingAll
+import app.securify.core.stopPing
 import app.securify.vpn.SecurifyVpn
 import kotlinx.coroutines.Dispatchers
 import sh.calvin.reorderable.ReorderableItem
@@ -198,7 +200,9 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
                                 }
                         }
                     }
-                    if (pings.containsValue(PING_PENDING)) LoadingIndicator(Modifier.size(48.dp))
+                    if (pings.containsValue(PING_PENDING)) IconButton(onClick = { stopPing() }) {
+                        Icon(Icons.Filled.Stop, stringResource(R.string.ping_stop))
+                    }
                     else IconButton(
                         enabled = list.isNotEmpty(),
                         onClick = { pingAll(list, app.prefs.ping, app.prefs.pingUrl) },

@@ -26,6 +26,7 @@
     <string name="ping_fail">timeout</string>
     <string name="ping_ms">%1$d ms</string>
     <string name="ping_all">Ping all</string>
+    <string name="ping_stop">Stop ping</string>
     <string name="sort">Sort</string>
     <string name="sort_origin">As in subscription</string>
     <string name="sort_name">By name</string>
