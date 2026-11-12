@@ -281,17 +281,28 @@ private fun Status(state: VpnState) {
 
 @Composable
 private fun TrafficPill(t: Traffic) {
-    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.padding(top = 16.dp)) {
+    Surface(shape = RoundedCornerShape(999.dp), color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.padding(top = 16.dp)) {
         Row(
-            Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Filled.ArrowUpward, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.tertiary)
-            Text(stringResource(R.string.speed, bytes(t.up)), style = MaterialTheme.typography.labelLarge)
-            Spacer(Modifier.width(10.dp))
-            Icon(Icons.Filled.ArrowDownward, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-            Text(stringResource(R.string.speed, bytes(t.down)), style = MaterialTheme.typography.labelLarge)
+            // current speed
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.ArrowUpward, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.tertiary)
+                Text(stringResource(R.string.speed, bytes(t.up)), style = MaterialTheme.typography.labelLarge)
+                Spacer(Modifier.width(6.dp))
+                Icon(Icons.Filled.ArrowDownward, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.speed, bytes(t.down)), style = MaterialTheme.typography.labelLarge)
+            }
+            // total used traffic to the right, with arrows too, in same pill
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.ArrowUpward, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f))
+                Text(bytes(t.upTotal), style = MaterialTheme.typography.labelLarge)
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Filled.ArrowDownward, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+                Text(bytes(t.downTotal), style = MaterialTheme.typography.labelLarge)
+            }
         }
     }
 }

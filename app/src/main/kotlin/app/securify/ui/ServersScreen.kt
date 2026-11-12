@@ -137,6 +137,7 @@ fun ServersScreen(modifier: Modifier) {
     var fabOpen by rememberSaveable { mutableStateOf(false) }
     var manual by rememberSaveable { mutableStateOf(false) }
     var sortMenu by remember { mutableStateOf(false) }
+    var renameSub by remember { mutableStateOf<Sub?>(null) }
     var pageId by rememberSaveable { mutableStateOf<String?>(null) }
     val subs = app.subs
     val wanted = subs.indexOfFirst { it.id == pageId }.takeIf { it >= 0 }
@@ -281,6 +282,7 @@ fun ServersScreen(modifier: Modifier) {
                                         if (r == SnackbarResult.ActionPerformed) Store.putSub(sub)
                                     }
                                 },
+                                onRename = { renameSub = it },
                                 modifier = Modifier.animateItem(),
                             )
                         }
@@ -316,6 +318,29 @@ fun ServersScreen(modifier: Modifier) {
     }
 
     if (manual) ManualDialog(onDismiss = { manual = false }) { manual = false; import(it) }
+
+    renameSub?.let { sub ->
+        var name by remember(sub.id) { mutableStateOf(sub.name) }
+        AlertDialog(
+            onDismissRequest = { renameSub = null },
+            title = { Text("Rename subscription") },
+            text = {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    Store.putSub(sub.copy(name = name.trim().ifEmpty { sub.name }))
+                    renameSub = null
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { renameSub = null }) { Text("Cancel") } }
+        )
+    }
 }
 
 @Composable
@@ -391,7 +416,7 @@ private fun EmptyState() {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDelete: () -> Unit, modifier: Modifier) {
+private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDelete: () -> Unit, onRename: (Sub) -> Unit, modifier: Modifier) {
     val ctx = LocalContext.current
     val c = MaterialTheme.colorScheme
     val info = sub.info
@@ -447,6 +472,10 @@ private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDel
                                 onClick = { menu = false; copyText(ctx, "HWID", Subs.hwid(sub.url)) },
                             )
                         }
+                        DropdownMenuItem(
+                            text = { Text("Rename") },
+                            onClick = { menu = false; onRename(sub) }
+                        )
                         DropdownMenuItem(text = { Text(stringResource(R.string.delete)) }, onClick = { menu = false; onDelete() })
                     }
                 }
