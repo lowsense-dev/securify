@@ -60,8 +60,10 @@ object Subs {
                 SubAgent.HAPP -> "Happ/3.2.1"
             })
             c.setRequestProperty("Accept", "*/*")
-            if (Store.state.value.prefs.hwid) {
-                c.setRequestProperty("x-hwid", hwid(url))
+            val prefs = Store.state.value.prefs
+            if (prefs.hwid || prefs.customHwid.isNotBlank()) {
+                val hwidValue = prefs.customHwid.takeIf { it.isNotBlank() } ?: hwid(url)
+                c.setRequestProperty("x-hwid", hwidValue)
                 c.setRequestProperty("x-device-os", Platform.os)
                 c.setRequestProperty("x-ver-os", Platform.osVersion)
                 c.setRequestProperty("x-device-model", Platform.model)

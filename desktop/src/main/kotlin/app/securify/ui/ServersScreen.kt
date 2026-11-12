@@ -318,7 +318,7 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
         var name by remember(sub.id) { mutableStateOf(sub.name) }
         AlertDialog(
             onDismissRequest = { renameSub = null },
-            title = { Text("Rename subscription") },
+            title = { Text(stringResource(R.string.rename_subscription)) },
             text = {
                 OutlinedTextField(
                     value = name,
@@ -331,9 +331,9 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
                 TextButton(onClick = {
                     Store.putSub(sub.copy(name = name.trim().ifEmpty { sub.name }))
                     renameSub = null
-                }) { Text("Save") }
+                }) { Text(stringResource(R.string.save)) }
             },
-            dismissButton = { TextButton(onClick = { renameSub = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { renameSub = null }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }
@@ -458,7 +458,7 @@ private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDel
                             )
                         }
                         DropdownMenuItem(
-                            text = { Text("Rename") },
+                            text = { Text(stringResource(R.string.rename)) },
                             onClick = { menu = false; onRename(sub) }
                         )
                         DropdownMenuItem(text = { Text(stringResource(R.string.delete)) }, onClick = { menu = false; onDelete() })

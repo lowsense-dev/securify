@@ -57,6 +57,7 @@ data class Prefs(
     val pingUrl: String = "https://www.gstatic.com/generate_204",
     val sort: SortMode = SortMode.ORIGIN,
     val hwid: Boolean = true,
+    val customHwid: String = "",
     val autoUpdate: Boolean = true,
     val fragment: Boolean = false,
     val proxyRules: String = "",
@@ -132,7 +133,7 @@ fun encode(s: AppState): JSONObject = JSONObject()
     .put("prefs", s.prefs.let {
         JSONObject().put("selected", it.selected).put("ruDirect", it.ruDirect).put("appMode", it.appMode.name)
             .put("apps", JSONArray(it.apps.toList())).put("ping", it.ping.name).put("pingUrl", it.pingUrl)
-            .put("sort", it.sort.name).put("hwid", it.hwid).put("autoUpdate", it.autoUpdate)
+            .put("sort", it.sort.name).put("hwid", it.hwid).put("customHwid", it.customHwid).put("autoUpdate", it.autoUpdate)
             .put("fragment", it.fragment).put("proxyRules", it.proxyRules).put("directRules", it.directRules)
             .put("blockRules", it.blockRules).put("dns", it.dns).put("fakeDns", it.fakeDns).put("agent", it.agent.name)
             .put("geo", it.geo.name).put("geoUpdated", it.geoUpdated)
@@ -165,6 +166,7 @@ fun decode(j: JSONObject): AppState {
         pingUrl = p.optString("pingUrl", d.pingUrl),
         sort = runCatching { SortMode.valueOf(p.getString("sort")) }.getOrDefault(d.sort),
         hwid = p.optBoolean("hwid", d.hwid),
+        customHwid = p.optString("customHwid", d.customHwid),
         autoUpdate = p.optBoolean("autoUpdate", d.autoUpdate),
         fragment = p.optBoolean("fragment", d.fragment),
         proxyRules = p.optString("proxyRules", d.proxyRules),

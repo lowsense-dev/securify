@@ -104,7 +104,12 @@
     <string name="auto_update_hint">По интервалу из панели, по умолчанию раз в сутки</string>
     <string name="hwid">Отправлять HWID</string>
     <string name="hwid_hint">Свой для каждой подписки, провайдеры не смогут связать устройство</string>
+    <string name="custom_hwid">Свой HWID</string>
+    <string name="custom_hwid_hint">Оставьте пустым для авто-генерации. Подменяет отправляемое значение.</string>
+    <string name="custom_hwid_auto">Авто-генерация</string>
     <string name="copy_hwid">Копировать HWID</string>
+    <string name="rename">Переименовать</string>
+    <string name="rename_subscription">Переименовать подписку</string>
     <string name="sec_about">О приложении</string>
     <string name="auto">Авто</string>
     <string name="auto_hint">Самый быстрый из %d серверов, переключается при сбое</string>

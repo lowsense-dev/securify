@@ -73,6 +73,7 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit, onRules: () -> Unit, 
     val scope = rememberCoroutineScope()
     var editUrl by rememberSaveable { mutableStateOf(false) }
     var editDns by rememberSaveable { mutableStateOf(false) }
+    var editCustomHwid by rememberSaveable { mutableStateOf(false) }
     var geoBusy by remember { mutableStateOf(false) }
     val restart = { SecurifyVpn.restartIfOn(ctx) }
     fun updateGeo(src: GeoSource) {
@@ -206,6 +207,15 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit, onRules: () -> Unit, 
                     trailing = { Switch(p.hwid, { v -> Store.prefs { it.copy(hwid = v) } }) },
                 )
             }
+            if (p.hwid) {
+                item {
+                    Item(
+                        title = stringResource(R.string.custom_hwid),
+                        summary = p.customHwid.ifBlank { stringResource(R.string.custom_hwid_auto) },
+                        onClick = { editCustomHwid = true },
+                    )
+                }
+            }
 
             item {
                 Item(last = true, title = stringResource(R.string.agent), summary = stringResource(R.string.agent_hint)) {
@@ -245,6 +255,19 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit, onRules: () -> Unit, 
                 ) { Text(stringResource(R.string.save)) }
             },
             dismissButton = { TextButton(onClick = { editUrl = false }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+
+    if (editCustomHwid) {
+        var hwid by rememberSaveable { mutableStateOf(p.customHwid) }
+        AlertDialog(
+            onDismissRequest = { editCustomHwid = false },
+            title = { Text(stringResource(R.string.custom_hwid)) },
+            text = { OutlinedTextField(hwid, { hwid = it }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
+            confirmButton = {
+                TextButton(onClick = { Store.prefs { it.copy(customHwid = hwid.trim()) }; editCustomHwid = false }) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = { TextButton(onClick = { editCustomHwid = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }

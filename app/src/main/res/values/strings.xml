@@ -101,7 +101,12 @@
     <string name="auto_update_hint">Uses the panel\'s update interval, once a day by default</string>
     <string name="hwid">Send HWID</string>
     <string name="hwid_hint">Unique for each subscription, so providers can\'t link your device</string>
+    <string name="custom_hwid">Custom HWID</string>
+    <string name="custom_hwid_hint">Leave empty to use auto-generated. Overrides the sent value.</string>
+    <string name="custom_hwid_auto">Auto-generated</string>
     <string name="copy_hwid">Copy HWID</string>
+    <string name="rename">Rename</string>
+    <string name="rename_subscription">Rename subscription</string>
     <string name="sec_about">About</string>
     <string name="auto">Auto</string>
     <string name="auto_hint">Fastest of %d servers, switches over if one fails</string>
