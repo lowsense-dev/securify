@@ -43,7 +43,7 @@ suspend fun ping(server: Server, method: PingMethod, url: String): Long = runInt
                 try {
                     val out = p.inputStream.bufferedReader().readText()
                     p.waitFor(5, TimeUnit.SECONDS)
-                    Regex("time=([\\d.]+)").find(out)!!.groupValues[1].toDouble().toLong().coerceAtLeast(1)
+                    Regex("time=([\\d.]+)").find(out)?.groupValues?.getOrNull(1)?.toDoubleOrNull()?.toLong()?.coerceAtLeast(1) ?: -1L
                 } finally { p.destroy() }
             }
             PingMethod.REAL -> PingHooks.real(server, url)

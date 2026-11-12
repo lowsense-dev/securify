@@ -4,8 +4,8 @@ package app.securify.desktop
 
 import app.securify.ui.R
 import app.securify.ui.str
+import app.securify.core.VpnState
 import app.securify.vpn.SecurifyVpn
-import app.securify.vpn.VpnState
 import org.freedesktop.dbus.DBusPath
 import org.freedesktop.dbus.Struct
 import org.freedesktop.dbus.Tuple

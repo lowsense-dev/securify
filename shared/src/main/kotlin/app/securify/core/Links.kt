@@ -247,10 +247,14 @@ private fun wireguard(raw: String, rest: String): Server {
 
 private val notProxy = setOf("freedom", "blackhole", "dns", "loopback")
 
+private fun firstNonProxyOutbound(c: JSONObject): JSONObject {
+    val obs = c.getJSONArray("outbounds")
+    return (0 until obs.length()).map { obs.getJSONObject(it) }.first { it.optString("protocol") !in notProxy }
+}
+
 private fun parseJsonConfig(s: String): Server {
     val c = JSONObject(s)
-    val obs = c.getJSONArray("outbounds")
-    val ob = (0 until obs.length()).map { obs.getJSONObject(it) }.first { it.optString("protocol") !in notProxy }
+    val ob = firstNonProxyOutbound(c)
     val st = ob.optJSONObject("settings") ?: JSONObject()
     val target = st.optJSONArray("vnext")?.optJSONObject(0) ?: st.optJSONArray("servers")?.optJSONObject(0)
         ?: st.optJSONArray("peers")?.optJSONObject(0) ?: st
@@ -262,4 +266,9 @@ private fun parseJsonConfig(s: String): Server {
         ss?.optString("network")?.ifEmpty { null } ?: "tcp", ss?.optString("security")?.ifEmpty { null } ?: "none",
         ob, c,
     )
+}
+
+fun protocolLabel(p: String) = when (p) {
+    "vless" -> "VLESS"; "vmess" -> "VMess"; "trojan" -> "Trojan"; "shadowsocks" -> "Shadowsocks"
+    "hysteria" -> "Hysteria2"; "wireguard" -> "WireGuard"; else -> p
 }

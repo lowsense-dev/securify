@@ -78,9 +78,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.Morph
 import app.securify.core.Store
+import app.securify.core.Traffic
+import app.securify.core.VpnState
 import app.securify.vpn.SecurifyVpn
-import app.securify.vpn.Traffic
-import app.securify.vpn.VpnState
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

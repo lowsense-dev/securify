@@ -66,6 +66,12 @@ android {
         buildConfig = true
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
     packaging {
         jniLibs.useLegacyPackaging = true
     }

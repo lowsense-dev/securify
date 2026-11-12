@@ -59,11 +59,7 @@ import com.journeyapps.barcodescanner.BarcodeEncoder
 import app.securify.core.MANUAL_ID
 import app.securify.core.PING_PENDING
 import app.securify.core.Sub
-
-fun protocolLabel(p: String) = when (p) {
-    "vless" -> "VLESS"; "vmess" -> "VMess"; "trojan" -> "Trojan"; "shadowsocks" -> "Shadowsocks"
-    "hysteria" -> "Hysteria2"; "wireguard" -> "WireGuard"; else -> p
-}
+import app.securify.core.protocolLabel
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

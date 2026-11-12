@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.updateAndGet
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
 import java.util.concurrent.Executors
 
 data class SubInfo(
@@ -96,7 +97,10 @@ object Store {
         val s = state.updateAndGet(f)
         io.execute {
             val tmp = File(file.path + ".tmp")
-            tmp.writeText(encode(s).toString())
+            FileOutputStream(tmp).use { fos ->
+                fos.write(encode(s).toString().toByteArray())
+                fos.fd.sync()
+            }
             tmp.renameTo(file)
         }
     }

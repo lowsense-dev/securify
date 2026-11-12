@@ -9,6 +9,7 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import app.securify.R
 import app.securify.core.Store
+import app.securify.core.VpnState
 import app.securify.ui.MainActivity
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope

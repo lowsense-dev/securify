@@ -21,6 +21,8 @@ import app.securify.core.AppMode
 import app.securify.core.Geo
 import app.securify.core.Store
 import app.securify.core.TUN_MTU
+import app.securify.core.Traffic
+import app.securify.core.VpnState
 import app.securify.core.buildConfig
 import app.securify.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
@@ -41,15 +43,6 @@ import libv2ray.Libv2ray
 import org.json.JSONObject
 import java.io.File
 import java.util.Locale
-
-sealed interface VpnState {
-    data object Off : VpnState
-    data object Connecting : VpnState
-    data class On(val server: String, val since: Long) : VpnState
-    data class Failed(val message: String) : VpnState
-}
-
-data class Traffic(val up: Long = 0, val down: Long = 0, val upTotal: Long = 0, val downTotal: Long = 0)
 
 class SecurifyVpn : VpnService() {
     companion object {
@@ -158,6 +151,7 @@ class SecurifyVpn : VpnService() {
                 runCatching { newTun?.close() }
             }
             if (e is kotlinx.coroutines.CancellationException) throw e
+            e.printStackTrace()
             teardown()
             finish(VpnState.Failed(e.message ?: e.toString()))
         }
@@ -247,10 +241,11 @@ class SecurifyVpn : VpnService() {
         s.connect(LocalSocketAddress(sock.path, LocalSocketAddress.Namespace.FILESYSTEM))
         s.soTimeout = 10_000
         s.outputStream.write(
-            ("GET http://ip-api.com/json/?fields=status,country,countryCode,query&lang=$lang HTTP/1.0\r\n" +
+            ("GET https://ip-api.com/json/?fields=status,country,countryCode,query&lang=$lang HTTP/1.0\r\n" +
                 "Host: ip-api.com\r\n\r\n").toByteArray(),
         )
-        val j = JSONObject(s.inputStream.readBytes().decodeToString().substringAfter("\r\n\r\n"))
+        val resp = s.inputStream.readBytes().decodeToString().substringAfter("\r\n\r\n")
+        val j = runCatching { JSONObject(resp) }.getOrNull() ?: return null
         if (j.optString("status") != "success") return null
         listOf(flag(j.optString("countryCode")) + " " + j.optString("country"), j.getString("query"))
             .map { it.trim() }.filter { it.isNotEmpty() }.joinToString(" · ")

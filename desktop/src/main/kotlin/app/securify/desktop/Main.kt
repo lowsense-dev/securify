@@ -22,12 +22,16 @@ import app.securify.ui.R
 import app.securify.ui.SecurifyApp
 import app.securify.ui.SecurifyTheme
 import app.securify.ui.str
+import app.securify.core.VpnState
 import app.securify.vpn.SecurifyVpn
-import app.securify.vpn.VpnState
 import java.awt.Dimension
 import java.awt.SystemTray
 import java.awt.Toolkit
-import kotlin.concurrent.thread
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
@@ -54,10 +58,10 @@ fun main(args: Array<String>) {
     Store.init(Env.data)
     DesktopPing.install()
     setupUpdater { SecurifyVpn.isActive }
-    thread(isDaemon = true, name = "sub-update") {
+    CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
         while (true) {
             if (Store.state.value.prefs.autoUpdate) Subs.refreshDue()
-            Thread.sleep(3_600_000)
+            delay(3_600_000)
         }
     }
 

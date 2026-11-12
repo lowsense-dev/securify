@@ -117,7 +117,6 @@ Required repository secrets:
 - Custom rules, DNS and anti-DPI don't apply to Xray JSON subscriptions, which keep their own config. JSON servers are also left out of Auto.
 - Shadowsocks plugins (obfs, v2ray-plugin) are not supported.
 - Subscriptions are downloaded outside the VPN.
-- The ip-api.com request goes over plain HTTP, without encryption.
 - Linux: without systemd-resolved, DNS queries are caught on port 53 inside the tunnel instead of being set system-wide.
 - Linux: switching servers restarts Xray, so connections drop for a moment.
 - Linux: Flatpak and Snap apps don't show up in the per-app list; add their process names by hand.

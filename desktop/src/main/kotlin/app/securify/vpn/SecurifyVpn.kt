@@ -1,6 +1,8 @@
 package app.securify.vpn
 
 import app.securify.core.Store
+import app.securify.core.Traffic
+import app.securify.core.VpnState
 import app.securify.core.buildConfig
 import app.securify.desktop.Env
 import app.securify.desktop.desktopConfig
@@ -33,17 +35,8 @@ import java.nio.file.attribute.PosixFilePermissions
 import java.util.Locale
 import kotlin.concurrent.thread
 
-sealed interface VpnState {
-    data object Off : VpnState
-    data object Connecting : VpnState
-    data class On(val server: String, val since: Long) : VpnState
-    data class Failed(val message: String) : VpnState
-}
-
 /** Asked from the app when there's no polkit agent to show pkexec's prompt; null answer means cancelled. */
 class PasswordPrompt(val retry: Boolean, val answer: CompletableDeferred<String?> = CompletableDeferred())
-
-data class Traffic(val up: Long = 0, val down: Long = 0, val upTotal: Long = 0, val downTotal: Long = 0)
 
 /** The desktop counterpart of the Android VpnService: Xray creates the TUN interface itself, as root through pkexec. */
 object SecurifyVpn {
@@ -201,6 +194,7 @@ object SecurifyVpn {
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
+            e.printStackTrace()
             stopXray()
             finish(VpnState.Failed(e.message ?: e.toString()))
         }
@@ -287,8 +281,8 @@ object SecurifyVpn {
             if (attempt > 0) delay(1500)
             runCatching {
                 withTimeout(10_000) {
-                    val body = request(sock, "http://ip-api.com/json/?fields=status,country,countryCode,query&lang=$lang").substringAfter("\r\n\r\n")
-                    val j = JSONObject(body)
+                    val body = request(sock, "https://ip-api.com/json/?fields=status,country,countryCode,query&lang=$lang").substringAfter("\r\n\r\n")
+                    val j = runCatching { JSONObject(body) }.getOrNull() ?: return@withTimeout null
                     if (j.optString("status") == "success") listOf(flag(j.optString("countryCode")) + " " + j.optString("country"), j.getString("query"))
                         .map { it.trim() }.filter { it.isNotEmpty() }.joinToString(" · ") else null
                 }

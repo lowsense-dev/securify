@@ -82,9 +82,9 @@ import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.toPath
 import app.securify.R
 import app.securify.core.Store
+import app.securify.core.Traffic
+import app.securify.core.VpnState
 import app.securify.vpn.SecurifyVpn
-import app.securify.vpn.Traffic
-import app.securify.vpn.VpnState
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
