@@ -47,7 +47,10 @@ fun hwidFor(deviceId: String, url: String): String {
 }
 
 object Subs {
-    fun hwid(url: String): String = hwidFor(Platform.deviceId, url)
+    fun hwid(url: String, custom: String = ""): String {
+        if (custom.isNotBlank()) return custom
+        return hwidFor(Platform.deviceId, url)
+    }
 
     fun fetch(url: String, id: String = UUID.randomUUID().toString()): Sub {
         val c = URL(url).openConnection() as HttpURLConnection
@@ -61,8 +64,10 @@ object Subs {
             })
             c.setRequestProperty("Accept", "*/*")
             val prefs = Store.state.value.prefs
-            if (prefs.hwid || prefs.customHwid.isNotBlank()) {
-                val hwidValue = prefs.customHwid.takeIf { it.isNotBlank() } ?: hwid(url)
+            val existing = Store.state.value.subs.find { it.url == url }
+            val custom = existing?.customHwid ?: ""
+            if (prefs.hwid || custom.isNotBlank()) {
+                val hwidValue = hwid(url, custom)
                 c.setRequestProperty("x-hwid", hwidValue)
                 c.setRequestProperty("x-device-os", Platform.os)
                 c.setRequestProperty("x-ver-os", Platform.osVersion)
@@ -87,7 +92,7 @@ object Subs {
         }
     }
 
-    fun refresh(sub: Sub) = Store.putSub(fetch(sub.url, sub.id))
+    fun refresh(sub: Sub) = Store.putSub(fetch(sub.url, sub.id).copy(customHwid = sub.customHwid))
 
     fun refreshDue() {
         val now = System.currentTimeMillis()

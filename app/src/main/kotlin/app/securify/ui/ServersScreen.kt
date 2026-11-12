@@ -138,6 +138,7 @@ fun ServersScreen(modifier: Modifier) {
     var manual by rememberSaveable { mutableStateOf(false) }
     var sortMenu by remember { mutableStateOf(false) }
     var renameSub by remember { mutableStateOf<Sub?>(null) }
+    var editCustomHwidSub by remember { mutableStateOf<Sub?>(null) }
     var pageId by rememberSaveable { mutableStateOf<String?>(null) }
     val subs = app.subs
     val wanted = subs.indexOfFirst { it.id == pageId }.takeIf { it >= 0 }
@@ -283,6 +284,7 @@ fun ServersScreen(modifier: Modifier) {
                                     }
                                 },
                                 onRename = { renameSub = it },
+                                onEditCustomHwid = { editCustomHwidSub = it },
                                 modifier = Modifier.animateItem(),
                             )
                         }
@@ -339,6 +341,29 @@ fun ServersScreen(modifier: Modifier) {
                 }) { Text(stringResource(R.string.save)) }
             },
             dismissButton = { TextButton(onClick = { renameSub = null }) { Text(stringResource(R.string.cancel)) } }
+        )
+    }
+
+    editCustomHwidSub?.let { sub ->
+        var hwid by remember(sub.id) { mutableStateOf(sub.customHwid) }
+        AlertDialog(
+            onDismissRequest = { editCustomHwidSub = null },
+            title = { Text(stringResource(R.string.custom_hwid)) },
+            text = {
+                OutlinedTextField(
+                    value = hwid,
+                    onValueChange = { hwid = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    Store.putSub(sub.copy(customHwid = hwid.trim()))
+                    editCustomHwidSub = null
+                }) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = { TextButton(onClick = { editCustomHwidSub = null }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }
@@ -416,7 +441,7 @@ private fun EmptyState() {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDelete: () -> Unit, onRename: (Sub) -> Unit, modifier: Modifier) {
+private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDelete: () -> Unit, onRename: (Sub) -> Unit, onEditCustomHwid: (Sub) -> Unit, modifier: Modifier) {
     val ctx = LocalContext.current
     val c = MaterialTheme.colorScheme
     val info = sub.info
@@ -469,12 +494,16 @@ private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDel
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.copy_hwid)) },
                                 leadingIcon = { Icon(Icons.Filled.Fingerprint, null) },
-                                onClick = { menu = false; copyText(ctx, "HWID", Subs.hwid(sub.url)) },
+                                onClick = { menu = false; copyText(ctx, "HWID", Subs.hwid(sub.url, sub.customHwid)) },
                             )
                         }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.rename)) },
                             onClick = { menu = false; onRename(sub) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.custom_hwid)) },
+                            onClick = { menu = false; onEditCustomHwid(sub) }
                         )
                         DropdownMenuItem(text = { Text(stringResource(R.string.delete)) }, onClick = { menu = false; onDelete() })
                     }
