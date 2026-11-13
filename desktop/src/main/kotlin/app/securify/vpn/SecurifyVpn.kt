@@ -281,7 +281,7 @@ object SecurifyVpn {
             if (attempt > 0) delay(1500)
             runCatching {
                 withTimeout(10_000) {
-                    val body = request(sock, "https://ip-api.com/json/?fields=status,country,countryCode,query&lang=$lang").substringAfter("\r\n\r\n")
+                    val body = request(sock, "http://ip-api.com/json/?fields=status,country,countryCode,query&lang=$lang").substringAfter("\r\n\r\n")
                     val j = runCatching { JSONObject(body) }.getOrNull() ?: return@withTimeout null
                     if (j.optString("status") == "success") listOf(flag(j.optString("countryCode")) + " " + j.optString("country"), j.getString("query"))
                         .map { it.trim() }.filter { it.isNotEmpty() }.joinToString(" · ") else null

@@ -113,7 +113,10 @@ object Subs {
         val urls = t.lines().map { it.trim() }.filter { it.startsWith("http://") || it.startsWith("https://") }
         if (urls.isNotEmpty()) {
             val existing = Store.state.value.subs.associateBy { it.url }
-            val subs = urls.map { u -> fetch(u, existing[u]?.id ?: UUID.randomUUID().toString()) }
+            val subs = urls.map { u ->
+                val ex = existing[u]
+                fetch(u, ex?.id ?: UUID.randomUUID().toString()).copy(customHwid = ex?.customHwid ?: "")
+            }
             subs.forEach(Store::putSub)
             return Imported.Subscription(subs.first().id, subs.first().name, subs.sumOf { it.servers.size })
         }

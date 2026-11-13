@@ -282,11 +282,7 @@ private fun Status(state: VpnState) {
 @Composable
 private fun TrafficPill(t: Traffic) {
     Surface(shape = RoundedCornerShape(999.dp), color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.padding(top = 16.dp)) {
-        Row(
-            Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             // current speed
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.ArrowUpward, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.tertiary)
@@ -295,13 +291,17 @@ private fun TrafficPill(t: Traffic) {
                 Icon(Icons.Filled.ArrowDownward, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                 Text(stringResource(R.string.speed, bytes(t.down)), style = MaterialTheme.typography.labelLarge)
             }
-            // total used traffic to the right, with arrows too, in same pill
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.ArrowUpward, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f))
-                Text(bytes(t.upTotal), style = MaterialTheme.typography.labelLarge)
+            // used totals below with prefix
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                Text(stringResource(R.string.traffic_used), style = MaterialTheme.typography.labelLarge)
                 Spacer(Modifier.width(4.dp))
-                Icon(Icons.Filled.ArrowDownward, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
-                Text(bytes(t.downTotal), style = MaterialTheme.typography.labelLarge)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.ArrowUpward, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f))
+                    Text(bytes(t.upTotal), style = MaterialTheme.typography.labelLarge)
+                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.Filled.ArrowDownward, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+                    Text(bytes(t.downTotal), style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
     }

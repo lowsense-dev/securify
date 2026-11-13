@@ -18,6 +18,7 @@
     <string name="notif_channel">Статус VPN</string>
     <string name="notif_connected">Подключено: %1$s</string>
     <string name="speed">%1$s/с</string>
+    <string name="traffic_used">Исп.:</string>
     <string name="add_first_sub">Добавить подписку</string>
     <string name="exit_detecting">Определяем IP…</string>
     <string name="exit_unknown">Не удалось определить IP</string>

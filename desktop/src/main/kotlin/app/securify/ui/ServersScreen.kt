@@ -63,9 +63,6 @@ import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleFloatingActionButton
 import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.toShape
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.Composable
@@ -138,7 +135,7 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
     LaunchedEffect(wanted) { if (wanted < pager.pageCount && pager.currentPage != wanted) pager.scrollToPage(wanted) }
     val page = subs.getOrNull(pager.currentPage)
     val list = page?.let { sortServers(it.servers, app.prefs.sort, pings) }.orEmpty()
-    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scroll = TopAppBarDefaults.pinnedScrollBehavior()
     val landscape = isLandscape()
 
     fun import(text: String?) {
@@ -253,19 +250,10 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
             else HorizontalPager(pager, Modifier.weight(1f), key = { subs.getOrNull(it)?.id ?: it }) { index ->
                 val sub = subs.getOrNull(index) ?: return@HorizontalPager
                 val servers = sortServers(sub.servers, app.prefs.sort, pings)
-                val pull = rememberPullToRefreshState()
-                val pulling = sub.id in refreshing
-                PullToRefreshBox(
-                    isRefreshing = pulling,
-                    onRefresh = { if (sub.url.isNotEmpty()) refresh(listOf(sub)) },
-                    state = pull,
-                    modifier = Modifier.fillMaxSize(),
-                    indicator = { PullToRefreshDefaults.LoadingIndicator(state = pull, isRefreshing = pulling, modifier = Modifier.align(Alignment.TopCenter)) },
+                LazyColumn(
+                    if (split) Modifier.fillMaxSize() else Modifier.centeredContent(),
+                    contentPadding = PaddingValues(start = 16.dp, end = if (landscape && !split) 104.dp else 16.dp, bottom = 120.dp),
                 ) {
-                    LazyColumn(
-                        if (split) Modifier.fillMaxSize() else Modifier.centeredContent(),
-                        contentPadding = PaddingValues(start = 16.dp, end = if (landscape && !split) 104.dp else 16.dp, bottom = 120.dp),
-                    ) {
                         item(key = "sub:" + sub.id) {
                             SubPanel(
                                 sub,
@@ -309,7 +297,6 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
                             }
                         }
                     }
-                }
             }
         }
     }

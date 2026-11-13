@@ -63,7 +63,7 @@ import app.securify.vpn.SecurifyVpn
 @Composable
 fun SettingsScreen(modifier: Modifier, onApps: () -> Unit, onRules: () -> Unit, onLogs: () -> Unit) {
     val p = Store.state.collectAsState().value.prefs
-    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scroll = TopAppBarDefaults.pinnedScrollBehavior()
     val scope = rememberCoroutineScope()
     val snack = remember { SnackbarHostState() }
     var editUrl by rememberSaveable { mutableStateOf(false) }

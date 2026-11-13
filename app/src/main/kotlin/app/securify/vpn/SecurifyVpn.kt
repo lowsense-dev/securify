@@ -241,7 +241,7 @@ class SecurifyVpn : VpnService() {
         s.connect(LocalSocketAddress(sock.path, LocalSocketAddress.Namespace.FILESYSTEM))
         s.soTimeout = 10_000
         s.outputStream.write(
-            ("GET https://ip-api.com/json/?fields=status,country,countryCode,query&lang=$lang HTTP/1.0\r\n" +
+            ("GET http://ip-api.com/json/?fields=status,country,countryCode,query&lang=$lang HTTP/1.0\r\n" +
                 "Host: ip-api.com\r\n\r\n").toByteArray(),
         )
         val resp = s.inputStream.readBytes().decodeToString().substringAfter("\r\n\r\n")

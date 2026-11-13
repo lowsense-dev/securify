@@ -463,8 +463,7 @@ private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDel
                     )
                 }
                 if (sub.url.isNotEmpty()) {
-                    if (refreshing) LoadingIndicator(Modifier.size(48.dp))
-                    else IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, stringResource(R.string.refresh)) }
+                    IconButton(enabled = !refreshing, onClick = onRefresh) { Icon(Icons.Filled.Refresh, stringResource(R.string.refresh)) }
                 }
                 Box {
                     IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, null) }

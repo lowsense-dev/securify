@@ -19,6 +19,7 @@
     <string name="notif_channel">VPN status</string>
     <string name="notif_connected">Connected to %1$s</string>
     <string name="speed">%1$s/s</string>
+    <string name="traffic_used">Used:</string>
     <string name="add_first_sub">Add a subscription</string>
     <string name="exit_detecting">Detecting IP…</string>
     <string name="exit_unknown">Couldn\'t detect the exit IP</string>
