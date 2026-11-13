@@ -113,7 +113,7 @@ fun SecurifyApp() {
     }
 
     val pages = @Composable { m: Modifier ->
-        HorizontalPager(pager, m) { i ->
+        HorizontalPager(pager, m, userScrollEnabled = false) { i ->
             when (i) {
                 0 -> HomeScreen(Modifier, onToggle = toggle, onServers = { go(1) })
                 1 -> ServersScreen(Modifier)
