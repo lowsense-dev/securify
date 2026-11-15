@@ -52,21 +52,24 @@ object Subs {
         return hwidFor(Platform.deviceId, url)
     }
 
-    fun fetch(url: String, id: String = UUID.randomUUID().toString()): Sub {
+    /** [settings] carries the per-subscription overrides; by default the stored sub for [url] is used. */
+    fun fetch(url: String, id: String = UUID.randomUUID().toString(), settings: Sub? = null): Sub {
+        val prefs = Store.state.value.prefs
+        val local = settings ?: Store.state.value.subs.find { it.url == url }
+        val agent = local?.agent ?: prefs.agent
+        val useHwid = local?.hwid ?: prefs.hwid
+        val custom = local?.customHwid ?: ""
         val c = URL(url).openConnection() as HttpURLConnection
         try {
             c.connectTimeout = 15_000
             c.readTimeout = 20_000
-            c.setRequestProperty("User-Agent", when (Store.state.value.prefs.agent) {
+            c.setRequestProperty("User-Agent", when (agent) {
                 SubAgent.SECURIFY -> "Securify/${Platform.appVersion}"
                 SubAgent.V2RAYNG -> "v2rayNG/1.10.24"
                 SubAgent.HAPP -> "Happ/3.2.1"
             })
             c.setRequestProperty("Accept", "*/*")
-            val prefs = Store.state.value.prefs
-            val existing = Store.state.value.subs.find { it.url == url }
-            val custom = existing?.customHwid ?: ""
-            if (prefs.hwid || custom.isNotBlank()) {
+            if (useHwid) {
                 val hwidValue = hwid(url, custom)
                 c.setRequestProperty("x-hwid", hwidValue)
                 c.setRequestProperty("x-device-os", Platform.os)
@@ -86,13 +89,16 @@ object Subs {
                 webPageUrl = headerText(c.getHeaderField("profile-web-page-url")),
             )
             val name = subName(c.getHeaderField("profile-title"), c.getHeaderField("content-disposition"), url)
-            return Sub(id, url, name, parseBody(body), info, System.currentTimeMillis())
+            return Sub(
+                id, url, name, parseBody(body), info, System.currentTimeMillis(),
+                customHwid = custom, customName = local?.customName ?: "", hwid = local?.hwid, agent = local?.agent,
+            )
         } finally {
             c.disconnect()
         }
     }
 
-    fun refresh(sub: Sub) = Store.putSub(fetch(sub.url, sub.id).copy(customHwid = sub.customHwid))
+    fun refresh(sub: Sub) = Store.putSub(fetch(sub.url, sub.id, sub))
 
     fun refreshDue() {
         val now = System.currentTimeMillis()
@@ -108,17 +114,27 @@ object Subs {
         data object Nothing : Imported
     }
 
-    fun import(text: String): Imported {
+    fun subscriptionUrls(text: String): List<String> =
+        text.trim().lines().map { it.trim() }.filter { it.startsWith("http://") || it.startsWith("https://") }
+
+    fun import(text: String, hwid: Boolean? = null, agent: SubAgent? = null, customHwid: String = ""): Imported {
         val t = text.trim()
-        val urls = t.lines().map { it.trim() }.filter { it.startsWith("http://") || it.startsWith("https://") }
+        val urls = subscriptionUrls(t)
         if (urls.isNotEmpty()) {
             val existing = Store.state.value.subs.associateBy { it.url }
             val subs = urls.map { u ->
                 val ex = existing[u]
-                fetch(u, ex?.id ?: UUID.randomUUID().toString()).copy(customHwid = ex?.customHwid ?: "")
+                val id = ex?.id ?: UUID.randomUUID().toString()
+                fetch(
+                    u, id,
+                    Sub(
+                        id, u, "", emptyList(),
+                        customHwid = customHwid.trim(), customName = ex?.customName ?: "", hwid = hwid, agent = agent,
+                    ),
+                )
             }
             subs.forEach(Store::putSub)
-            return Imported.Subscription(subs.first().id, subs.first().name, subs.sumOf { it.servers.size })
+            return Imported.Subscription(subs.first().id, subs.first().title, subs.sumOf { it.servers.size })
         }
         val entries = parseBody(t)
         if (entries.isEmpty()) return Imported.Nothing

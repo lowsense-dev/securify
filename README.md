@@ -14,7 +14,8 @@ A proxy client with TUN mode for Android and Linux, built on the [Xray](https://
   - the subscription panel shows the description (`announce`), expiry date, remaining traffic (`subscription-userinfo`), and support and subscription page links;
   - HWID headers in the Remnawave format (`x-hwid`, `x-device-os`, `x-ver-os`, `x-device-model`), which can be turned off;
   - auto-update on `profile-update-interval`;
-  - User-Agent preset: Securify, v2rayNG or Happ, for panels that serve each client differently.
+  - User-Agent preset: Securify, v2rayNG or Happ, for panels that serve each client differently;
+  - per-subscription overrides for sending HWID, the User-Agent and a custom HWID value, set from the subscription menu or while adding it.
 - **Auto:** each subscription has an entry that picks the fastest server and switches over when it fails (Xray balancer `leastPing` with the observatory).
 - **Import** from the clipboard, a QR code, or by hand. **Export** of subscription and server links as text or a QR code.
 - **Ping** in three ways: TCP, ICMP, and real delay through the proxy. All servers are pinged in parallel.

@@ -56,7 +56,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.journeyapps.barcodescanner.BarcodeEncoder
-import app.securify.core.MANUAL_ID
 import app.securify.core.PING_PENDING
 import app.securify.core.Sub
 import app.securify.core.protocolLabel
@@ -91,7 +90,7 @@ fun PingLabel(ms: Long?) {
 }
 
 @Composable
-fun subTitle(sub: Sub) = if (sub.id == MANUAL_ID) stringResource(R.string.manual_group) else sub.name
+fun subTitle(sub: Sub) = sub.title.ifEmpty { stringResource(R.string.manual_group) }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable

@@ -27,13 +27,28 @@ data class Sub(
     val info: SubInfo = SubInfo(),
     val updatedAt: Long = 0,
     val customHwid: String = "",
+    /** Kept apart from [name], so a refresh can replace the panel's title without losing the operator's one. */
+    val customName: String = "",
+    /** Overrides [Prefs.hwid] for this subscription; null follows the app setting. */
+    val hwid: Boolean? = null,
+    /** Overrides [Prefs.agent] for this subscription; null follows the app setting. */
+    val agent: SubAgent? = null,
 ) {
+    /** What the UI shows: the operator's name if set, otherwise the panel's or the link's. */
+    val title: String get() = customName.ifBlank { name }
+
+    /** Entering the panel's own title (or nothing) drops the custom name, so the panel keeps control of it. */
+    fun renamed(input: String): Sub {
+        val entered = input.trim()
+        return copy(customName = if (entered == name) "" else entered)
+    }
+
     val servers: List<Server> by lazy { entries.mapNotNull(::parseEntry) }
 
     /** Balances between the subscription's link servers; JSON configs can't be merged into one config. */
     val auto: Server? by lazy {
         servers.filter { it.config == null && !it.needsPin }.takeIf { it.size > 1 }?.let { g ->
-            Server(AUTO_PREFIX + id, listOf(autoLabel, name).filter { it.isNotEmpty() }.joinToString(" · "),
+            Server(AUTO_PREFIX + id, listOf(autoLabel, title).filter { it.isNotEmpty() }.joinToString(" · "),
                 "auto", "", 0, "", "", JSONObject(), group = g)
         }
     }
@@ -124,7 +139,8 @@ fun encode(s: AppState): JSONObject = JSONObject()
     .put("subs", JSONArray(s.subs.map { sub ->
         JSONObject().put("id", sub.id).put("url", sub.url).put("name", sub.name)
             .put("entries", JSONArray(sub.entries)).put("updatedAt", sub.updatedAt)
-            .put("customHwid", sub.customHwid)
+            .put("customHwid", sub.customHwid).put("customName", sub.customName)
+            .put("hwid", sub.hwid ?: JSONObject.NULL).put("agent", sub.agent?.name ?: JSONObject.NULL)
             .put("info", sub.info.let {
                 JSONObject().put("upload", it.upload).put("download", it.download).put("total", it.total)
                     .put("expire", it.expire).put("interval", it.intervalHours).put("announce", it.announce)
@@ -154,6 +170,11 @@ fun decode(j: JSONObject): AppState {
                 ),
                 o.optLong("updatedAt"),
                 o.optString("customHwid", ""),
+                o.optString("customName", ""),
+                if (o.has("hwid") && !o.isNull("hwid")) o.getBoolean("hwid") else null,
+                if (o.has("agent") && !o.isNull("agent")) {
+                    runCatching { SubAgent.valueOf(o.getString("agent")) }.getOrNull()
+                } else null,
             )
         }
     }.orEmpty()
