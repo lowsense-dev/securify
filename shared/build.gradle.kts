@@ -13,7 +13,7 @@ kotlin {
 }
 
 dependencies {
-    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     // Android ships org.json in the platform, the desktop app adds the library itself
     compileOnly("org.json:json:20260814")
     testImplementation(kotlin("test"))

@@ -111,12 +111,12 @@
     <string name="custom_hwid_auto">Авто-генерация</string>
     <string name="copy_hwid">Копировать HWID</string>
     <string name="sub_settings">Настройки подписки</string>
+    <string name="sub_url">Ссылка на подписку</string>
+    <string name="sub_name">Название</string>
     <string name="add_subscription">Добавить подписку</string>
     <string name="follow_app">Как в приложении</string>
     <string name="hwid_on">Да</string>
     <string name="hwid_off">Нет</string>
-    <string name="rename">Переименовать</string>
-    <string name="rename_subscription">Переименовать подписку</string>
     <string name="sec_about">О приложении</string>
     <string name="auto">Авто</string>
     <string name="auto_hint">Самый быстрый из %d серверов, переключается при сбое</string>

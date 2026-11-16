@@ -22,6 +22,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -138,7 +140,6 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
     var searching by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val searchFocus = remember { FocusRequester() }
-    var renameSub by remember { mutableStateOf<Sub?>(null) }
     var settingsSub by remember { mutableStateOf<Sub?>(null) }
     var importText by remember { mutableStateOf<String?>(null) }
     var pageId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -299,7 +300,6 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
                                         if (r == SnackbarResult.ActionPerformed) Store.putSub(sub)
                                     }
                                 },
-                                onRename = { renameSub = it },
                                 onSettings = { settingsSub = it },
                                 modifier = Modifier.animateItem(),
                             )
@@ -336,30 +336,6 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
 
     if (manual) ManualDialog(onDismiss = { manual = false }) { manual = false; import(it) }
 
-    renameSub?.let { sub ->
-        var name by remember(sub.id) { mutableStateOf(sub.title) }
-        AlertDialog(
-            onDismissRequest = { renameSub = null },
-            title = { Text(stringResource(R.string.rename_subscription)) },
-            text = {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    singleLine = true,
-                    placeholder = { Text(sub.name.ifEmpty { stringResource(R.string.manual_group) }) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    Store.putSub(sub.renamed(name))
-                    renameSub = null
-                }) { Text(stringResource(R.string.save)) }
-            },
-            dismissButton = { TextButton(onClick = { renameSub = null }) { Text(stringResource(R.string.cancel)) } }
-        )
-    }
-
     importText?.let { text ->
         val existing = Subs.subscriptionUrls(text).firstNotNullOfOrNull { u -> app.subs.find { it.url == u } }
         SubSettingsDialog(
@@ -368,7 +344,7 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
             prefs = app.prefs,
             isNew = true,
             onDismiss = { importText = null },
-            onSave = { hwid, agent, customHwid ->
+            onSave = { _, _, hwid, agent, customHwid ->
                 importText = null
                 runImport(text, hwid, agent, customHwid)
             },
@@ -382,11 +358,11 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
             prefs = app.prefs,
             isNew = false,
             onDismiss = { settingsSub = null },
-            onSave = { hwid, agent, customHwid ->
-                val updated = sub.copy(hwid = hwid, agent = agent, customHwid = customHwid)
+            onSave = { name, url, hwid, agent, customHwid ->
+                val updated = sub.renamed(name).copy(url = url, hwid = hwid, agent = agent, customHwid = customHwid)
                 Store.putSub(updated)
                 settingsSub = null
-                val changed = updated.hwid != sub.hwid || updated.agent != sub.agent || updated.customHwid != sub.customHwid
+                val changed = updated.url != sub.url || updated.hwid != sub.hwid || updated.agent != sub.agent || updated.customHwid != sub.customHwid
                 if (changed && updated.url.isNotEmpty()) refresh(listOf(updated))
             },
         )
@@ -394,22 +370,28 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
 }
 
 @Composable
-private fun <T> SettingPicker(label: String, options: List<Pair<T, String>>, value: T, onSelect: (T) -> Unit) {
+private fun <T> SettingPicker(label: String, options: List<Pair<T, String>>, value: T, first: Boolean, last: Boolean, onSelect: (T) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.labelLarge)
-        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-            TextButton(onClick = { open = true }) {
-                Text(options.firstOrNull { it.first == value }?.second.orEmpty())
-                Icon(Icons.Filled.ArrowDropDown, null)
-            }
-            DropdownMenu(open, onDismissRequest = { open = false }) {
-                options.forEach { (option, text) ->
-                    DropdownMenuItem(
-                        text = { Text(text) },
-                        leadingIcon = { if (option == value) Icon(Icons.Filled.Check, null) },
-                        onClick = { open = false; onSelect(option) },
-                    )
+    Surface(
+        shape = segmentShape(first, last),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+    ) {
+        Row(Modifier.padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Box {
+                TextButton(onClick = { open = true }) {
+                    Text(options.firstOrNull { it.first == value }?.second.orEmpty(), maxLines = 1)
+                    Icon(Icons.Filled.ArrowDropDown, null)
+                }
+                DropdownMenu(open, onDismissRequest = { open = false }) {
+                    options.forEach { (option, text) ->
+                        DropdownMenuItem(
+                            text = { Text(text) },
+                            leadingIcon = { if (option == value) Icon(Icons.Filled.Check, null) },
+                            onClick = { open = false; onSelect(option) },
+                        )
+                    }
                 }
             }
         }
@@ -423,7 +405,7 @@ private fun SubSettingsDialog(
     prefs: Prefs,
     isNew: Boolean,
     onDismiss: () -> Unit,
-    onSave: (Boolean?, SubAgent?, String) -> Unit,
+    onSave: (String, String, Boolean?, SubAgent?, String) -> Unit,
 ) {
     val hwidOptions = listOf<Pair<Boolean?, String>>(
         null to stringResource(R.string.follow_app),
@@ -436,23 +418,51 @@ private fun SubSettingsDialog(
         SubAgent.V2RAYNG to "v2rayNG",
         SubAgent.HAPP to "Happ",
     )
+    var name by remember(initial?.id) { mutableStateOf(initial?.title ?: "") }
+    var url by remember(initial?.id) { mutableStateOf(initial?.url ?: "") }
     var hwid by remember(initial?.id) { mutableStateOf(initial?.hwid) }
     var agent by remember(initial?.id) { mutableStateOf(initial?.agent) }
     var custom by remember(initial?.id) { mutableStateOf(initial?.customHwid ?: "") }
+    val fieldShape = RoundedCornerShape(20.dp)
+    val validUrl = initial?.url?.isNotEmpty() != true || url.trim().let { it.startsWith("http://") || it.startsWith("https://") }
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
         title = { Text(title) },
         text = {
-            Column {
-                SettingPicker(stringResource(R.string.hwid), hwidOptions, hwid) { hwid = it }
-                Spacer(Modifier.height(16.dp))
-                SettingPicker(stringResource(R.string.agent), agentOptions, agent) { agent = it }
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (!isNew && initial != null) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        singleLine = true,
+                        shape = fieldShape,
+                        label = { Text(stringResource(R.string.sub_name)) },
+                        placeholder = { Text(initial.name.ifEmpty { stringResource(R.string.manual_group) }) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (initial.url.isNotEmpty()) {
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = url,
+                            onValueChange = { url = it },
+                            singleLine = true,
+                            shape = fieldShape,
+                            label = { Text(stringResource(R.string.sub_url)) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                }
+                SettingPicker(stringResource(R.string.hwid), hwidOptions, hwid, first = true, last = false) { hwid = it }
+                SettingPicker(stringResource(R.string.agent), agentOptions, agent, first = false, last = true) { agent = it }
                 if (hwid ?: prefs.hwid) {
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = custom,
                         onValueChange = { custom = it },
                         singleLine = true,
+                        shape = fieldShape,
                         label = { Text(stringResource(R.string.custom_hwid)) },
                         placeholder = { Text(stringResource(R.string.custom_hwid_auto)) },
                         modifier = Modifier.fillMaxWidth(),
@@ -461,13 +471,13 @@ private fun SubSettingsDialog(
                         stringResource(R.string.custom_hwid_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 6.dp),
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp),
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(hwid, agent, custom.trim()) }) {
+            TextButton(enabled = validUrl, onClick = { onSave(name, url.trim(), hwid, agent, custom.trim()) }) {
                 Text(stringResource(if (isNew) R.string.add else R.string.save))
             }
         },
@@ -565,7 +575,7 @@ private fun EmptyState() {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDelete: () -> Unit, onRename: (Sub) -> Unit, onSettings: (Sub) -> Unit, modifier: Modifier) {
+private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDelete: () -> Unit, onSettings: (Sub) -> Unit, modifier: Modifier) {
     val c = MaterialTheme.colorScheme
     val info = sub.info
     var menu by remember { mutableStateOf(false) }
@@ -616,15 +626,9 @@ private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDel
                             )
                         }
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.rename)) },
-                            onClick = { menu = false; onRename(sub) }
+                            text = { Text(stringResource(R.string.sub_settings)) },
+                            onClick = { menu = false; onSettings(sub) }
                         )
-                        if (sub.url.isNotEmpty()) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.sub_settings)) },
-                                onClick = { menu = false; onSettings(sub) }
-                            )
-                        }
                         DropdownMenuItem(text = { Text(stringResource(R.string.delete)) }, onClick = { menu = false; onDelete() })
                     }
                 }
