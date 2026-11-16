@@ -29,6 +29,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
@@ -43,6 +46,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
@@ -92,6 +96,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -100,6 +107,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -107,6 +115,7 @@ import app.securify.R
 import app.securify.core.Prefs
 import app.securify.core.Server
 import app.securify.core.SortMode
+import app.securify.core.fuzzyMatch
 import app.securify.core.Store
 import app.securify.core.Sub
 import app.securify.core.SubAgent
@@ -140,6 +149,9 @@ fun ServersScreen(modifier: Modifier) {
     var fabOpen by rememberSaveable { mutableStateOf(false) }
     var manual by rememberSaveable { mutableStateOf(false) }
     var sortMenu by remember { mutableStateOf(false) }
+    var searching by rememberSaveable { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    val searchFocus = remember { FocusRequester() }
     var renameSub by remember { mutableStateOf<Sub?>(null) }
     var settingsSub by remember { mutableStateOf<Sub?>(null) }
     var importText by remember { mutableStateOf<String?>(null) }
@@ -152,7 +164,8 @@ fun ServersScreen(modifier: Modifier) {
     LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.collect { i -> latestSubs.getOrNull(i)?.let { pageId = it.id } } }
     LaunchedEffect(wanted) { if (wanted < pager.pageCount && pager.currentPage != wanted) pager.scrollToPage(wanted) }
     val page = subs.getOrNull(pager.currentPage)
-    val list = page?.let { sortServers(it.servers, app.prefs.sort, pings) }.orEmpty()
+    val list = page?.let { sortServers(it.servers, app.prefs.sort, pings) }.orEmpty().filter { fuzzyMatch(it.name, searchQuery) }
+    LaunchedEffect(searching) { if (searching) searchFocus.requestFocus() }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val landscape = isLandscape()
 
@@ -192,7 +205,9 @@ fun ServersScreen(modifier: Modifier) {
 
     val qr = rememberLauncherForActivityResult(ScanContract()) { import(it.contents) }
 
-    BackHandler(fabOpen) { fabOpen = false }
+    BackHandler(fabOpen || searching) {
+        if (searching) { searching = false; searchQuery = "" } else fabOpen = false
+    }
 
     Scaffold(
         modifier.nestedScroll(scroll.nestedScrollConnection),
@@ -200,29 +215,41 @@ fun ServersScreen(modifier: Modifier) {
         topBar = {
             ScreenTopBar(
                 title = stringResource(R.string.tab_servers),
-                subtitle = pluralStringResource(R.plurals.servers, list.size, list.size),
+                subtitle = if (searching) null else pluralStringResource(R.plurals.servers, list.size, list.size),
+                titleContent = if (searching) {
+                    { ServerSearchField(searchQuery, { searchQuery = it }, searchFocus) }
+                } else null,
                 scroll = scroll,
                 actions = {
-                    Box {
-                        IconButton(onClick = { sortMenu = true }) { Icon(Icons.AutoMirrored.Filled.Sort, stringResource(R.string.sort)) }
-                        DropdownMenu(sortMenu, onDismissRequest = { sortMenu = false }) {
-                            listOf(SortMode.ORIGIN to R.string.sort_origin, SortMode.NAME to R.string.sort_name, SortMode.PING to R.string.sort_ping)
-                                .forEach { (mode, label) ->
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(label)) },
-                                        leadingIcon = { if (app.prefs.sort == mode) Icon(Icons.Filled.Check, null) },
-                                        onClick = { Store.prefs { it.copy(sort = mode) }; sortMenu = false },
-                                    )
-                                }
+                    if (searching) {
+                        IconButton(onClick = { searching = false; searchQuery = "" }) {
+                            Icon(Icons.Filled.Close, stringResource(R.string.close))
                         }
+                    } else {
+                        IconButton(enabled = list.isNotEmpty(), onClick = { searching = true }) {
+                            Icon(Icons.Filled.Search, stringResource(R.string.search_servers))
+                        }
+                        Box {
+                            IconButton(onClick = { sortMenu = true }) { Icon(Icons.AutoMirrored.Filled.Sort, stringResource(R.string.sort)) }
+                            DropdownMenu(sortMenu, onDismissRequest = { sortMenu = false }) {
+                                listOf(SortMode.ORIGIN to R.string.sort_origin, SortMode.NAME to R.string.sort_name, SortMode.PING to R.string.sort_ping)
+                                    .forEach { (mode, label) ->
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(label)) },
+                                            leadingIcon = { if (app.prefs.sort == mode) Icon(Icons.Filled.Check, null) },
+                                            onClick = { Store.prefs { it.copy(sort = mode) }; sortMenu = false },
+                                        )
+                                    }
+                            }
+                        }
+                        if (pings.containsValue(PING_PENDING)) IconButton(onClick = { stopPing() }) {
+                            Icon(Icons.Filled.Stop, stringResource(R.string.ping_stop))
+                        }
+                        else IconButton(
+                            enabled = list.isNotEmpty(),
+                            onClick = { pingAll(list, app.prefs.ping, app.prefs.pingUrl) },
+                        ) { Icon(Icons.Filled.Speed, stringResource(R.string.ping_all)) }
                     }
-                    if (pings.containsValue(PING_PENDING)) IconButton(onClick = { stopPing() }) {
-                        Icon(Icons.Filled.Stop, stringResource(R.string.ping_stop))
-                    }
-                    else IconButton(
-                        enabled = list.isNotEmpty(),
-                        onClick = { pingAll(list, app.prefs.ping, app.prefs.pingUrl) },
-                    ) { Icon(Icons.Filled.Speed, stringResource(R.string.ping_all)) }
                 },
             )
         },
@@ -268,7 +295,7 @@ fun ServersScreen(modifier: Modifier) {
             if (subs.isEmpty()) EmptyState()
             else HorizontalPager(pager, Modifier.weight(1f), key = { subs.getOrNull(it)?.id ?: it }) { index ->
                 val sub = subs.getOrNull(index) ?: return@HorizontalPager
-                val servers = sortServers(sub.servers, app.prefs.sort, pings)
+                val servers = sortServers(sub.servers, app.prefs.sort, pings).filter { fuzzyMatch(it.name, searchQuery) }
                 val pull = rememberPullToRefreshState()
                 val pulling = sub.id in refreshing
                 PullToRefreshBox(
@@ -511,6 +538,27 @@ private fun SubTabs(subs: List<Sub>, current: String?, onSelect: (String) -> Uni
 private fun clipboardText(ctx: Context): String? =
     ctx.getSystemService(ClipboardManager::class.java).primaryClip
         ?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(ctx)?.toString()
+
+@Composable
+private fun ServerSearchField(query: String, onQueryChange: (String) -> Unit, focus: FocusRequester) {
+    val style = MaterialTheme.typography.titleLarge
+    BasicTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier.fillMaxWidth().focusRequester(focus),
+        singleLine = true,
+        textStyle = style.copy(color = MaterialTheme.colorScheme.onSurface),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { defaultKeyboardAction(ImeAction.Search) }),
+        decorationBox = { innerTextField ->
+            Box(contentAlignment = Alignment.CenterStart) {
+                if (query.isEmpty()) Text(stringResource(R.string.search_servers), style = style, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                innerTextField()
+            }
+        },
+    )
+}
 
 fun sortServers(list: List<Server>, sort: SortMode, pings: Map<String, Long>): List<Server> = when (sort) {
     SortMode.ORIGIN -> list

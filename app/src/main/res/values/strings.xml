@@ -43,6 +43,7 @@
     <string name="undo">Undo</string>
     <string name="refresh">Refresh</string>
     <string name="search">Search apps</string>
+    <string name="search_servers">Search servers</string>
 
     <string name="import_clipboard">From clipboard</string>
     <string name="import_qr">Scan QR code</string>

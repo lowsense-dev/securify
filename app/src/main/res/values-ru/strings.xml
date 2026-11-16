@@ -42,6 +42,7 @@
     <string name="undo">Вернуть</string>
     <string name="refresh">Обновить</string>
     <string name="search">Поиск приложений</string>
+    <string name="search_servers">Поиск серверов</string>
 
     <string name="import_clipboard">Из буфера обмена</string>
     <string name="import_qr">Сканировать QR-код</string>

@@ -102,14 +102,16 @@ fun ScreenTopBar(
     title: String,
     scroll: TopAppBarScrollBehavior,
     subtitle: String? = null,
+    titleContent: @Composable (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
+    val titleSlot: @Composable () -> Unit = { if (titleContent == null) Text(title) else titleContent() }
     when {
         !isLandscape() -> LargeFlexibleTopAppBar(
-            title = { Text(title) }, subtitle = subtitle?.let { { Text(it) } }, actions = actions, scrollBehavior = scroll,
+            title = titleSlot, subtitle = subtitle?.let { { Text(it) } }, actions = actions, scrollBehavior = scroll,
         )
-        subtitle != null -> TopAppBar(title = { Text(title) }, subtitle = { Text(subtitle) }, actions = actions, scrollBehavior = scroll)
-        else -> TopAppBar(title = { Text(title) }, actions = actions, scrollBehavior = scroll)
+        subtitle != null -> TopAppBar(title = titleSlot, subtitle = { Text(subtitle) }, actions = actions, scrollBehavior = scroll)
+        else -> TopAppBar(title = titleSlot, actions = actions, scrollBehavior = scroll)
     }
 }
 
