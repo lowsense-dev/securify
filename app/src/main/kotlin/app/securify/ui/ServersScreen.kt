@@ -229,7 +229,7 @@ fun ServersScreen(modifier: Modifier) {
                         }
                         if (importing) {
                             Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(Modifier.size(18.dp), progress = null, strokeWidth = 2.dp)
+                                CircularProgressIndicator(size = 18.dp, strokeWidth = 2.dp)
                             }
                         } else {
                             IconButton(onClick = { addOpen = true }) {
@@ -572,7 +572,6 @@ private fun SubPanel(
             sub = sub,
             onDismiss = { menu = false },
             onQr = { qr = true },
-            onPing = onPing,
             onSettings = { onSettings(sub) },
             onDelete = onDelete,
         )
@@ -591,9 +590,12 @@ private fun SubPanel(
                     style = MiuixTheme.textStyles.footnote1, color = c.onSurfaceVariantSummary,
                 )
             }
+            IconButton(onClick = onPing, enabled = sub.servers.isNotEmpty()) {
+                Icon(MiuixIcons.Stopwatch, stringResource(R.string.ping_all), Modifier.size(20.dp))
+            }
             if (sub.url.isNotEmpty()) {
                 if (refreshing) Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(18.dp), progress = null, strokeWidth = 2.dp)
+                    CircularProgressIndicator(size = 18.dp, strokeWidth = 2.dp)
                 } else IconButton(onClick = onRefresh) {
                     Icon(MiuixIcons.Refresh, stringResource(R.string.refresh), Modifier.size(20.dp))
                 }
@@ -652,7 +654,6 @@ private fun SubMenuDialog(
     sub: Sub,
     onDismiss: () -> Unit,
     onQr: () -> Unit,
-    onPing: () -> Unit,
     onSettings: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -700,12 +701,6 @@ private fun SubMenuDialog(
                     )
                     RowDivider()
                 }
-                BasicComponent(
-                    title = stringResource(R.string.ping_all),
-                    startAction = { ActionIcon(MiuixIcons.Stopwatch) },
-                    onClick = { act(onPing) },
-                )
-                RowDivider()
                 BasicComponent(
                     title = stringResource(R.string.sub_settings),
                     startAction = { ActionIcon(MiuixIcons.Settings) },

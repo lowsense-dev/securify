@@ -1,4 +1,4 @@
-# Securify
+# <img src="desktop/src/main/resources/securify.svg" width="44" height="44" alt=""> Securify
 
 **English** | [Русский](README_RU.md)
 

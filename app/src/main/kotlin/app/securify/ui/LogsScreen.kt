@@ -68,7 +68,7 @@ fun LogsScreen(onBack: () -> Unit) {
         val l = lines
         Box(Modifier.padding(pad).fillMaxSize(), contentAlignment = Alignment.Center) {
             when {
-                l == null -> CircularProgressIndicator(Modifier.size(28.dp), progress = null, strokeWidth = 2.dp)
+                l == null -> CircularProgressIndicator(size = 28.dp, strokeWidth = 2.dp)
                 l.isEmpty() -> Text(stringResource(R.string.logs_empty), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                 else -> SelectionContainer {
                     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp)) {

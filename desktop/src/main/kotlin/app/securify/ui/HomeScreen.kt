@@ -98,7 +98,7 @@ private fun ConnectButton(state: VpnState, onClick: () -> Unit, size: Dp = 196.d
             contentAlignment = Alignment.Center,
         ) {
             if (busy) {
-                CircularProgressIndicator(Modifier.size(size * 0.28f), progress = null, strokeWidth = 3.dp)
+                CircularProgressIndicator(size = size * 0.28f, strokeWidth = 3.dp)
             } else {
                 Icon(painterResource("ic_shield.xml"), null, Modifier.size(size * 0.38f), tint = content)
             }
@@ -136,7 +136,7 @@ private fun Status(state: VpnState) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (state is VpnState.Connecting) {
-                CircularProgressIndicator(Modifier.size(16.dp), progress = null, strokeWidth = 2.dp)
+                CircularProgressIndicator(size = 16.dp, strokeWidth = 2.dp)
                 Spacer(Modifier.size(8.dp))
             }
             Text(

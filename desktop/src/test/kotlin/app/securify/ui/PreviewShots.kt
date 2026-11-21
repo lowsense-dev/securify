@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.unit.Density
 import app.securify.core.AppState
+import app.securify.core.PING_PENDING
 import app.securify.core.Prefs
 import app.securify.core.Store
 import app.securify.core.Sub
@@ -118,6 +119,11 @@ fun main() {
     shot("home-on-light", 400, 600, dark = false) { SecurifyApp() }
     shot("servers-light", 400, 600, dark = false) { SecurifyApp(initialTab = 1) }
     shot("settings-light", 400, 600, dark = false) { SecurifyApp(initialTab = 2) }
+
+    val pings = Store.pings.value
+    Store.pings.value = pings + Store.state.value.subs.first().servers.associate { it.key to PING_PENDING }
+    shot("servers-pinging", 400, 600) { SecurifyApp(initialTab = 1) }
+    Store.pings.value = pings
 
     SecurifyVpn.passwordPrompt.value = app.securify.vpn.PasswordPrompt(retry = false)
     shot("password", 400, 600) { SecurifyApp() }

@@ -3,7 +3,6 @@ package app.securify.ui
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -115,7 +114,7 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit, onRules: () -> Unit, 
                             enabled = !geoBusy,
                             onClick = { updateGeo(p.geo) },
                             endActions = {
-                                if (geoBusy) CircularProgressIndicator(Modifier.size(18.dp), progress = null, strokeWidth = 2.dp)
+                                if (geoBusy) CircularProgressIndicator(size = 18.dp, strokeWidth = 2.dp)
                             },
                         )
                     }
@@ -279,7 +278,7 @@ private fun UpdateItem() {
             is UpdateState.Failed -> stringResource(R.string.update_failed, s.message)
         },
         endActions = {
-            if (u is UpdateState.Checking) CircularProgressIndicator(Modifier.size(18.dp), progress = null, strokeWidth = 2.dp)
+            if (u is UpdateState.Checking) CircularProgressIndicator(size = 18.dp, strokeWidth = 2.dp)
         },
         onClick = {
             when (val s = u) {

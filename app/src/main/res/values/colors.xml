@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="icon_bg">#0A5A50</color>
-    <color name="icon_cookie">#0F6B5F</color>
+    <color name="icon_bg">#10463D</color>
     <color name="icon_fg">#E6FFF8</color>
     <color name="window_bg">#F4FBF8</color>
 </resources>

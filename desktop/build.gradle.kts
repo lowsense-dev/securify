@@ -31,9 +31,11 @@ dependencies {
 // The UI reads the Android app's translations, so both apps share one set of strings.
 val generated = layout.buildDirectory.dir("generated/securify")
 val androidRes = rootProject.file("app/src/main/res")
+val shieldIcon = File(androidRes, "drawable/ic_shield.xml")
 val genSources by tasks.registering {
     val sources = listOf("values", "values-ru").flatMap { listOf(File(androidRes, "$it/strings.xml"), file("src/main/strings/$it/strings.xml")) }
     inputs.files(sources)
+    inputs.file(shieldIcon)
     inputs.property("version", "$versionName/$versionCode")
     outputs.dir(generated)
     doLast {
@@ -59,7 +61,7 @@ val genSources by tasks.registering {
             val name = if (src.path.startsWith(androidRes.path)) "android.xml" else "desktop.xml"
             src.copyTo(File(out, "res/strings/${src.parentFile.name}/$name"))
         }
-        File(androidRes, "drawable/ic_shield.xml").copyTo(File(out, "res/ic_shield.xml"))
+        shieldIcon.copyTo(File(out, "res/ic_shield.xml"))
     }
 }
 kotlin.sourceSets.main { kotlin.srcDir(genSources.map { generated.get().dir("kotlin") }) }
@@ -118,7 +120,7 @@ val appImage by tasks.registering(Exec::class) {
     val dist = layout.buildDirectory.dir("compose/binaries/main/app/Securify")
     val out = layout.buildDirectory.file("appimage/securify-$versionName-x86_64.AppImage")
     inputs.dir(dist)
-    inputs.files("appimage.sh", "securify.desktop")
+    inputs.files("appimage.sh", "securify.desktop", "src/main/resources/securify.svg")
     outputs.file(out)
     commandLine(
         "bash", file("appimage.sh").path,

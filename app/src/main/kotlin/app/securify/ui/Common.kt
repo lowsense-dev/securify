@@ -75,7 +75,7 @@ fun ProtocolBadge(protocol: String, selected: Boolean = false) {
 fun PingLabel(ms: Long?) {
     if (ms == null) return
     if (ms == PING_PENDING) {
-        CircularProgressIndicator(Modifier.size(14.dp), progress = null, strokeWidth = 1.5.dp)
+        CircularProgressIndicator(size = 14.dp, strokeWidth = 1.5.dp)
         return
     }
     val c = MiuixTheme.colorScheme

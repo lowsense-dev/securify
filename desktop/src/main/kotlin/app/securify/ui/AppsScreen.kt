@@ -91,7 +91,7 @@ fun AppsScreen(onBack: () -> Unit) {
             val list = apps
             if (list == null) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(28.dp), progress = null, strokeWidth = 2.dp)
+                    CircularProgressIndicator(size = 28.dp, strokeWidth = 2.dp)
                 }
             } else {
                 val q = query.trim()
