@@ -4,6 +4,10 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build without publishing, e.g. 1.8.0"
+        type: string
 
 permissions:
   contents: read
@@ -24,14 +28,21 @@ jobs:
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
       - name: Version
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
+          VERSION="$REQUESTED_VERSION"
           if [ "$GITHUB_REF_TYPE" = tag ]; then
             VERSION="${GITHUB_REF_NAME#v}"
-            if ! [[ "$VERSION" =~ ^([0-9]+)\.([0-9]{1,2})\.([0-9]{1,2})$ ]]; then echo "::error::tag must look like v1.2.3"; exit 1; fi
-            CODE=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3] ))
-          else
+          fi
+          if [ "$GITHUB_REF_TYPE" != tag ] && [ -z "$VERSION" ]; then
             VERSION="0.0.0-dev.$GITHUB_RUN_NUMBER"
             CODE=$GITHUB_RUN_NUMBER
+          elif [[ "$VERSION" =~ ^(0|[1-9][0-9]{0,4})\.(0|[1-9][0-9]?)\.(0|[1-9][0-9]?)$ ]]; then
+            CODE=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3] ))
+          else
+            echo "::error::version must look like 1.2.3"
+            exit 1
           fi
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "CODE=$CODE" >> "$GITHUB_ENV"
@@ -67,7 +78,7 @@ jobs:
           path: dist/
 
   publish:
-    if: github.ref_type == 'tag'
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     needs: build
     runs-on: ubuntu-latest
     permissions:
