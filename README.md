@@ -2,11 +2,13 @@
 
 **English** | [Русский](README_RU.md)
 
-A proxy client with TUN mode for Android and Linux, built on the [Xray](https://github.com/XTLS/Xray-core) core. It supports subscriptions with HWID and uses a Material 3 Expressive design.
+A proxy client with TUN mode and HWID subscriptions for Android, Linux and Windows. It uses [Xray](https://github.com/XTLS/Xray-core) for the tunnel and [Miuix](https://github.com/compose-miuix-ui/miuix) for the interface.
+
+[Download Securify](../../releases/latest) · [What's new in 1.8.0](.github/release-notes/v1.8.0.md#english)
 
 ## Features
 
-- **TUN via VpnService.** All device traffic goes through Xray: TCP, UDP, IPv4 and IPv6.
+- **TUN on all platforms.** Android uses VpnService. Xray creates the network interface on Linux and Windows.
 - **Protocols:** VLESS (Reality, Vision, XHTTP), VMess, Trojan, Shadowsocks (including 2022), Hysteria2 (with port hopping), WireGuard.
 - **Transports:** RAW/TCP, WebSocket, gRPC, HTTPUpgrade, XHTTP, mKCP. Security is TLS or Reality.
 - **Subscriptions** as base64, a plain list of links, or Xray JSON:
@@ -36,7 +38,7 @@ A proxy client with TUN mode for Android and Linux, built on the [Xray](https://
 
 ## Linux
 
-The Linux version is an AppImage with the same features and look: `securify-<version>-x86_64.AppImage` from [Releases](../../releases).
+The Linux version is an AppImage with the same features and a Miuix (HyperOS-style) interface: `securify-<version>-x86_64.AppImage` from [Releases](../../releases).
 
 ```sh
 chmod +x securify-*-x86_64.AppImage && ./securify-*-x86_64.AppImage
@@ -45,11 +47,23 @@ chmod +x securify-*-x86_64.AppImage && ./securify-*-x86_64.AppImage
 - Xray creates the TUN interface `securify0` itself, so connecting needs root. The app asks once per session through polkit (`pkexec`). If no polkit agent is running, as on many tiling WMs, it asks for the password itself and uses `sudo`.
 - Xray and the geo files are copied to `~/.local/share/securify`, where root can read them. Settings, subscriptions and the HWID live there too.
 - Per-app split tunneling matches process names (`firefox`), picked from installed apps or typed by hand.
-- The window follows the system dark mode and accent color through the XDG portal. Closing it hides the app to the tray: StatusNotifierItem (KDE, Waybar, Quickshell, GNOME with AppIndicator) or a classic X11 tray. The tray menu connects, disconnects and quits.
+- The window is a fixed phone-shaped one, 2:3, and can't be resized, maximized or fullscreened; the interface is the mobile one with the bottom tab bar.
+- The theme follows the system dark mode and accent color through the XDG portal. Closing it hides the app to the tray: StatusNotifierItem (KDE, Waybar, Quickshell, GNOME with AppIndicator) or a classic X11 tray. The tray menu connects, disconnects and quits.
 - "Add to the app menu" in Settings creates a launcher with Connect and Disconnect actions. `--connect` and `--disconnect` also work from a terminal.
 - Updates download the new AppImage, check it against `SHA256SUMS`, and replace the running file.
 
 Needs glibc x86_64, FUSE 2 (or `--appimage-extract-and-run`), and polkit or sudo.
+
+## Windows
+
+The Windows build is a portable zip, `securify-<version>-windows-x64.zip`: unpack it and run `Securify.exe`. Nothing else has to be installed, the JRE and Xray are inside.
+
+- Windows asks for administrator rights on every launch: Xray needs them to create the TUN adapter through `wintun.dll`. The app runs elevated as a whole, so it connects without a second prompt.
+- Settings and subscriptions live in `%LOCALAPPDATA%\Securify`. Xray runs from the unpacked folder.
+- The interface is the same mobile one as on Linux: a fixed 2:3 window with the bottom tab bar, and it can't be fullscreened.
+- Closing the window hides the app to the notification area; the tray menu connects, disconnects and quits.
+- The exit IP check uses a password-protected HTTP proxy on `127.0.0.1`.
+- Enter process names by hand for per-app routing. Traffic counters and in-app updates are not available on Windows yet.
 
 ## Building
 
@@ -69,6 +83,22 @@ The Linux AppImage is built with:
 
 It lands in `desktop/build/appimage/`. The build downloads Xray-linux-64 and the pinned appimagetool and checks their SHA-256.
 
+The Windows zip is cross-built on Linux:
+
+```sh
+./gradlew :desktop:windowsZip
+```
+
+It lands in `desktop/build/windows/`. The build downloads the pinned Temurin JRE for Windows, Xray-windows-64 and the Launch4j packaging tool, checks their SHA-256, bundles the app with the Windows Skiko natives and asks Launch4j for an `.exe` with an administrator manifest. ImageMagick (`magick` or `convert`) adds the icon when it is installed.
+
+The screens can be rendered to PNG without launching the app, which is how the design is checked:
+
+```sh
+./gradlew :desktop:previewShots
+```
+
+The images land in `desktop/build/previews/`.
+
 The first build downloads `libv2ray.aar` from [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite) v26.10.31 and checks its SHA-256.
 
 ### Signing
@@ -86,13 +116,13 @@ Instead of the file, you can set the environment variables `SIGNING_STORE_FILE`,
 
 ## Releases
 
-A tag matching `v*` triggers `.github/workflows/release.yml`. The workflow builds signed APKs and the Linux AppImage, then publishes them to a GitHub Release along with `SHA256SUMS`:
+A tag matching `v*` triggers `.github/workflows/release.yml`. The workflow builds signed APKs, the Linux AppImage and the Windows zip, then publishes them with `SHA256SUMS`:
 
 ```sh
 git tag v1.0.1 && git push origin v1.0.1
 ```
 
-A manual run (workflow_dispatch) uploads the APKs as a build artifact instead.
+A manual run uploads the builds to the workflow without publishing a release.
 
 Required repository secrets:
 
@@ -110,8 +140,9 @@ Required repository secrets:
 - `shared/` (`core/`): link and subscription parsing, Xray config building, storage, ping, geo files and updates. Both apps use it.
 - `vpn/SecurifyVpn`: brings up the TUN interface and hands its fd to Xray (`CoreController.startLoop`). The app itself is excluded from the VPN, otherwise Xray's outbound traffic would loop back into the tunnel.
 - The exit IP is looked up from ip-api.com through a separate Xray HTTP inbound. That inbound listens on a unix socket in the app's private directory, so other apps can't use it.
-- `ui/`: Jetpack Compose with Material 3 Expressive.
-- `desktop/`: the Linux app in Compose Multiplatform. A root helper started through pkexec or sudo runs Xray with its own TUN inbound (`autoSystemRoutingTable`, `autoOutboundsInterface`). The exit IP check uses a unix socket the same way.
+- `ui/`: Jetpack Compose with Miuix.
+- `desktop/`: the Linux and Windows app in Compose Multiplatform with Miuix. On Linux a root helper started through pkexec or sudo runs Xray with its own TUN inbound (`autoSystemRoutingTable`, `autoOutboundsInterface`); on Windows the app is already elevated and starts Xray directly. The exit IP check uses a unix socket on Linux and loopback TCP on Windows.
+- `desktop/src/test/.../PreviewShots.kt`: renders the screens to PNG with placeholder data, so the design can be checked without a running Xray.
 
 ## Limitations
 
@@ -122,6 +153,8 @@ Required repository secrets:
 - Linux: switching servers restarts Xray, so connections drop for a moment.
 - Linux: Flatpak and Snap apps don't show up in the per-app list; add their process names by hand.
 - Linux: while connected, TCP ping becomes ICMP, because Xray would answer the TCP handshake itself.
+- Windows: the whole app runs elevated, so Windows shows the UAC prompt at launch.
+- Windows: the traffic counters, the installed-apps list and in-app updates are Linux-only for now.
 
 ## License
 

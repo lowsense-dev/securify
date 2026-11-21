@@ -5,6 +5,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.security.DigestOutputStream
 import java.security.MessageDigest
 
@@ -27,7 +29,7 @@ object Geo {
         for (name in names) {
             val tmp = File(dir, "$name.tmp")
             bundled(name).use { i -> tmp.outputStream().use { i.copyTo(it) } }
-            tmp.renameTo(File(dir, name))
+            Files.move(tmp.toPath(), File(dir, name).toPath(), ATOMIC_MOVE)
         }
         stamp.writeText(version)
     }
@@ -50,7 +52,7 @@ object Geo {
             if (got != want) { tmp.delete(); throw IOException("$name: checksum mismatch") }
             tmp to File(dir, name)
         }
-        files.forEach { (tmp, dst) -> tmp.renameTo(dst) }
+        files.forEach { (tmp, dst) -> Files.move(tmp.toPath(), dst.toPath(), ATOMIC_MOVE) }
         stamp.writeText(DOWNLOADED)
         Store.prefs { it.copy(geo = source, geoUpdated = System.currentTimeMillis()) }
     }

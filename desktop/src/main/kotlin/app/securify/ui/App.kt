@@ -1,84 +1,68 @@
 package app.securify.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Dns
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.ShortNavigationBar
-import androidx.compose.material3.ShortNavigationBarItem
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.key
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
 import app.securify.vpn.PasswordPrompt
 import app.securify.vpn.SecurifyVpn
-import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.NavigationBar
+import top.yukonga.miuix.kmp.basic.NavigationBarItem
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Home
+import top.yukonga.miuix.kmp.icon.extended.Layers
+import top.yukonga.miuix.kmp.icon.extended.Settings
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-private data class Tab(val label: String, val on: androidx.compose.ui.graphics.vector.ImageVector, val off: androidx.compose.ui.graphics.vector.ImageVector)
+private data class Tab(val label: String, val icon: ImageVector)
 
 private val tabs = listOf(
-    Tab(R.string.tab_home, Icons.Filled.Shield, Icons.Outlined.Shield),
-    Tab(R.string.tab_servers, Icons.Filled.Dns, Icons.Outlined.Dns),
-    Tab(R.string.tab_settings, Icons.Filled.Settings, Icons.Outlined.Settings),
+    Tab(R.string.tab_home, MiuixIcons.Home),
+    Tab(R.string.tab_servers, MiuixIcons.Layers),
+    Tab(R.string.tab_settings, MiuixIcons.Settings),
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+/**
+ * The window is a fixed phone-shaped one, so the layout is the mobile one:
+ * three tabs in the bottom bar, no rail and no side-by-side panes.
+ */
 @Composable
-fun SecurifyApp() {
-    BoxWithConstraints {
-        val landscape = maxWidth > maxHeight && maxWidth >= 600.dp
-        // wider than half a screen: the server list sits next to the shield instead of in its own tab
-        CompositionLocalProvider(LocalLandscape provides landscape) { Content(wide = landscape && maxWidth >= 1000.dp) }
+fun SecurifyApp(initialTab: Int = 0) {
+    // the root scaffold owns the popup host, so dialogs have somewhere to render
+    Scaffold(
+        contentWindowInsets = WindowInsets(0),
+        containerColor = MiuixTheme.colorScheme.surface,
+    ) {
+        Content(initialTab)
+        SecurifyVpn.passwordPrompt.collectAsState().value?.let { PasswordDialog(it) }
     }
-    SecurifyVpn.passwordPrompt.collectAsState().value?.let { PasswordDialog(it) }
 }
 
 @Composable
@@ -86,40 +70,42 @@ private fun PasswordDialog(prompt: PasswordPrompt) {
     var pw by remember(prompt) { mutableStateOf("") }
     val focus = remember { FocusRequester() }
     val submit = { if (pw.isNotEmpty()) prompt.answer.complete(pw) }
-    AlertDialog(
-        onDismissRequest = { prompt.answer.complete(null) },
-        icon = { Icon(Icons.Filled.Lock, null) },
-        title = { Text(stringResource(R.string.password_title)) },
-        text = {
-            Column {
-                Text(stringResource(R.string.tun_password_hint), style = MaterialTheme.typography.bodyMedium)
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    pw, { pw = it }, Modifier.fillMaxWidth().focusRequester(focus),
-                    singleLine = true,
-                    isError = prompt.retry,
-                    supportingText = if (prompt.retry) ({ Text(stringResource(R.string.password_wrong)) }) else null,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { submit() }),
-                )
-            }
-        },
-        confirmButton = { TextButton(onClick = { submit() }, enabled = pw.isNotEmpty()) { Text(stringResource(R.string.action_connect)) } },
-        dismissButton = { TextButton(onClick = { prompt.answer.complete(null) }) { Text(stringResource(R.string.cancel)) } },
-    )
-    LaunchedEffect(prompt) { focus.requestFocus() }
+    AppDialog(
+        title = stringResource(R.string.password_title),
+        summary = stringResource(R.string.tun_password_hint),
+        onDismiss = { prompt.answer.complete(null) },
+    ) {
+        LaunchedEffect(prompt) { focus.requestFocus() }
+        TextField(
+            value = pw,
+            onValueChange = { pw = it },
+            modifier = Modifier.fillMaxWidth().focusRequester(focus),
+            label = stringResource(R.string.password_field),
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { submit() }),
+        )
+        if (prompt.retry) {
+            Text(
+                stringResource(R.string.password_wrong),
+                color = MiuixTheme.colorScheme.error,
+                style = MiuixTheme.textStyles.footnote1,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+        DialogButtons(
+            confirm = stringResource(R.string.action_connect),
+            onConfirm = { submit() },
+            enabled = pw.isNotEmpty(),
+            onDismiss = { prompt.answer.complete(null) },
+        )
+    }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun Content(wide: Boolean) {
-    val shown = if (wide) listOf(0, 2) else listOf(0, 1, 2)
-    var current by rememberSaveable { mutableStateOf(0) }
-    val pager = key(wide) { rememberPagerState(initialPage = shown.indexOf(current).coerceAtLeast(0)) { shown.size } }
-    LaunchedEffect(pager) { snapshotFlow { pager.targetPage }.collect { current = shown[it] } }
-    val scope = rememberCoroutineScope()
-    val go = { tab: Int -> scope.launch { pager.animateScrollToPage(shown.indexOf(tab).coerceAtLeast(0)) }; Unit }
+private fun Content(initialTab: Int) {
+    var current by rememberSaveable { mutableStateOf(initialTab) }
     var overlay by rememberSaveable { mutableStateOf<String?>(null) }
 
     val toggle = { if (SecurifyVpn.isActive) SecurifyVpn.stop() else SecurifyVpn.start() }
@@ -134,52 +120,31 @@ private fun Content(wide: Boolean) {
         return
     }
 
-    val pages = @Composable { m: Modifier ->
-        HorizontalPager(pager, m) { i ->
-            when (shown[i]) {
-                0 -> if (wide) Row(Modifier.fillMaxSize()) {
-                    ServersScreen(Modifier.weight(1f), split = true)
-                    HomeScreen(Modifier.weight(1f), onToggle = toggle, onServers = null)
-                } else HomeScreen(Modifier, onToggle = toggle, onServers = { go(1) })
+    Scaffold(
+        contentWindowInsets = WindowInsets(0),
+        bottomBar = {
+            NavigationBar(
+                color = MiuixTheme.colorScheme.surface,
+                showDivider = true,
+                defaultWindowInsetsPadding = false,
+            ) {
+                tabs.forEachIndexed { i, tab ->
+                    NavigationBarItem(
+                        selected = current == i,
+                        onClick = { current = i },
+                        icon = tab.icon,
+                        label = stringResource(tab.label),
+                    )
+                }
+            }
+        },
+    ) { pad ->
+        Box(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad)) {
+            when (current) {
+                0 -> HomeScreen(Modifier, onToggle = toggle, onServers = { current = 1 })
                 1 -> ServersScreen(Modifier)
                 else -> SettingsScreen(Modifier, onApps = { overlay = "apps" }, onRules = { overlay = "rules" }, onLogs = { overlay = "logs" })
             }
         }
-    }
-
-    if (isLandscape()) {
-        Surface(color = MaterialTheme.colorScheme.surface) { Row(Modifier.fillMaxSize()) {
-            NavigationRail(Modifier.fillMaxHeight(), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                Spacer(Modifier.weight(1f))
-                shown.forEachIndexed { i, tab ->
-                    val t = tabs[tab]
-                    NavigationRailItem(
-                        selected = pager.targetPage == i,
-                        onClick = { go(tab) },
-                        icon = { Icon(if (pager.targetPage == i) t.on else t.off, null) },
-                        label = { Text(stringResource(t.label)) },
-                    )
-                }
-                Spacer(Modifier.weight(1f))
-            }
-            pages(Modifier.weight(1f).consumeWindowInsets(WindowInsets.safeDrawing.only(WindowInsetsSides.Start)))
-        } }
-    } else {
-        Scaffold(
-            contentWindowInsets = WindowInsets(0),
-            bottomBar = {
-                ShortNavigationBar {
-                    shown.forEachIndexed { i, tab ->
-                        val t = tabs[tab]
-                        ShortNavigationBarItem(
-                            selected = pager.targetPage == i,
-                            onClick = { go(tab) },
-                            icon = { Icon(if (pager.targetPage == i) t.on else t.off, null) },
-                            label = { Text(stringResource(t.label)) },
-                        )
-                    }
-                }
-            },
-        ) { pad -> pages(Modifier.padding(pad).consumeWindowInsets(pad)) }
     }
 }

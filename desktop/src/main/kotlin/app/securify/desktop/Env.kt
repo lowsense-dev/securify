@@ -7,7 +7,8 @@ import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermissions
 import java.util.UUID
 
-const val TUN_NAME = "securify0"
+/** Windows needs a real adapter name; Linux gets a predictable interface to read stats from. */
+val tunName = if (Os.windows) "Securify" else "securify0"
 
 /**
  * Runs as root through pkexec or sudo until stdin closes, so the password is asked once per app session.
@@ -40,28 +41,37 @@ stop
 
 object Env {
     private val home = System.getProperty("user.home")
-    val data = File(System.getenv("XDG_DATA_HOME")?.ifBlank { null } ?: "$home/.local/share", "securify")
+
+    /** %LOCALAPPDATA%\Securify on Windows, the XDG data directory elsewhere. */
+    val data: File = if (Os.windows) {
+        File(System.getenv("LOCALAPPDATA")?.ifBlank { null } ?: home, "Securify")
+    } else {
+        File(System.getenv("XDG_DATA_HOME")?.ifBlank { null } ?: "$home/.local/share", "securify")
+    }
+
     private val resources = File(System.getProperty("compose.application.resources.dir") ?: "resources")
     val appDir: String? = System.getenv("APPDIR")
     val appImage: String? = System.getenv("APPIMAGE")
-    val xray get() = File(data, "xray")
+    val xray get() = if (Os.windows) File(resources.absoluteFile, "xray.exe") else File(data, "xray")
     val helper get() = File(data, "securify-helper")
 
-    /** Root can't read the AppImage's FUSE mount, so everything the helper runs is copied to the data dir first. */
+    /** On Linux root can't read the AppImage's FUSE mount, so everything the helper runs is copied to the data dir first. */
     fun setup() {
         data.mkdirs()
-        Files.setPosixFilePermissions(data.toPath(), PosixFilePermissions.fromString("rwx------"))
-        val src = File(resources, "xray")
-        if (!xray.exists() || xray.length() != src.length() || xray.lastModified() != src.lastModified()) {
-            val tmp = File(data, "xray.tmp")
-            src.copyTo(tmp, overwrite = true)
-            tmp.setExecutable(true, true)
-            tmp.setLastModified(src.lastModified())
-            tmp.renameTo(xray)
-        }
-        if (!helper.exists() || helper.readText() != HELPER) {
-            helper.writeText(HELPER)
-            helper.setExecutable(true, true)
+        if (!Os.windows) {
+            Files.setPosixFilePermissions(data.toPath(), PosixFilePermissions.fromString("rwx------"))
+            val src = File(resources, "xray")
+            if (!xray.exists() || xray.length() != src.length() || xray.lastModified() != src.lastModified()) {
+                val tmp = File(data, "xray.tmp")
+                src.copyTo(tmp, overwrite = true)
+                tmp.setExecutable(true, true)
+                tmp.setLastModified(src.lastModified())
+                tmp.renameTo(xray)
+            }
+            if (!helper.exists() || helper.readText() != HELPER) {
+                helper.writeText(HELPER)
+                helper.setExecutable(true, true)
+            }
         }
         Geo.ensure(data, BuildInfo.VERSION_CODE.toString()) { File(resources, it).inputStream() }
     }
@@ -72,26 +82,31 @@ object Env {
     fun deviceId(): String = runCatching { File("/etc/machine-id").readText().trim() }.getOrNull()?.ifEmpty { null }
         ?: File(data, "device-id").let { f -> f.takeIf { it.exists() }?.readText() ?: UUID.randomUUID().toString().also(f::writeText) }
 
-    fun osVersion(): String = runCatching {
-        File("/etc/os-release").readLines().associate { it.substringBefore('=') to it.substringAfter('=').trim('"') }
-            .let { it["PRETTY_NAME"] ?: it["NAME"] }
-    }.getOrNull() ?: System.getProperty("os.version")
+    fun osVersion(): String = if (Os.windows) {
+        "${System.getProperty("os.name")} ${System.getProperty("os.version")}"
+    } else {
+        runCatching {
+            File("/etc/os-release").readLines().associate { it.substringBefore('=') to it.substringAfter('=').trim('"') }
+                .let { it["PRETTY_NAME"] ?: it["NAME"] }
+        }.getOrNull() ?: System.getProperty("os.version")
+    }
 
-    /** Xray can point systemd-resolved at the tunnel; without resolved the system DNS stays as it is. */
-    fun hasResolved() = File("/run/systemd/resolve/stub-resolv.conf").exists() && which("resolvectl") != null
+    /** Xray can point systemd-resolved at the tunnel; Windows and other setups keep the system DNS. */
+    fun hasResolved() = !Os.windows && File("/run/systemd/resolve/stub-resolv.conf").exists() && which("resolvectl") != null
 
-    fun which(cmd: String) = System.getenv("PATH").orEmpty().split(':').map { File(it, cmd) }.firstOrNull { it.canExecute() }
+    fun which(cmd: String) = System.getenv("PATH").orEmpty().split(File.pathSeparator).map { File(it, cmd) }.firstOrNull { it.canExecute() }
 
-    /** The interface of the lowest-metric IPv4 default route that isn't our tunnel. */
-    fun physicalInterface(): String? = runCatching {
+    /** Linux only: Windows has no /proc to read the default route from. */
+    fun physicalInterface(): String? = if (Os.windows) null else runCatching {
         File("/proc/net/route").readLines().drop(1).map { it.trim().split(Regex("\\s+")) }
-            .filter { it.size > 7 && it[1] == "00000000" && it[7] == "00000000" && it[0] != TUN_NAME }
+            .filter { it.size > 7 && it[1] == "00000000" && it[7] == "00000000" && it[0] != tunName }
             .minByOrNull { it[6].toIntOrNull() ?: Int.MAX_VALUE }?.get(0)
     }.getOrNull()
 
-    /** Bytes the kernel sent into the tunnel (upload) and got back from it (download). */
-    fun tunBytes(): Pair<Long, Long>? = runCatching {
-        val s = File("/sys/class/net/$TUN_NAME/statistics")
+    /** Bytes the kernel sent into the tunnel (upload) and got back from it; Windows has no /sys. */
+    fun tunBytes(): Pair<Long, Long>? = if (Os.windows) null else runCatching {
+        val s = File("/sys/class/net/$tunName/statistics")
         File(s, "tx_bytes").readText().trim().toLong() to File(s, "rx_bytes").readText().trim().toLong()
     }.getOrNull()
+
 }

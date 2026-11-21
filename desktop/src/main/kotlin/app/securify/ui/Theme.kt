@@ -1,12 +1,14 @@
 package app.securify.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialExpressiveTheme
-import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import com.materialkolor.rememberDynamicColorScheme
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
+import app.securify.desktop.Os
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.darkColorScheme
+import top.yukonga.miuix.kmp.theme.lightColorScheme
 
 /** The XDG desktop portal's appearance settings (GNOME 47+, KDE 6): the desktop's take on Monet. */
 object SystemLook {
@@ -14,9 +16,9 @@ object SystemLook {
     val accent: Color?
 
     init {
-        dark = read("color-scheme")?.let { Regex("""uint32 (\d)|\bu (\d)""").find(it)?.groupValues?.drop(1)?.firstOrNull { g -> g.isNotEmpty() } }
+        dark = if (Os.windows) null else read("color-scheme")?.let { Regex("""uint32 (\d)|\bu (\d)""").find(it)?.groupValues?.drop(1)?.firstOrNull { g -> g.isNotEmpty() } }
             ?.let { when (it) { "1" -> true; "2" -> false; else -> null } }
-        accent = read("accent-color")?.let { out ->
+        accent = if (Os.windows) null else read("accent-color")?.let { out ->
             Regex("""(\d*\.\d+)""").findAll(out).map { it.value.toFloat() }.toList().takeIf { it.size >= 3 }
                 ?.takeIf { rgb -> rgb.all { it in 0f..1f } }?.let { Color(it[0], it[1], it[2]) }
         }
@@ -32,10 +34,51 @@ object SystemLook {
     }.getOrNull()
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+/** Securify's own seed color, used when the desktop doesn't report an accent. */
+private val Brand = Color(0xFF0E7A6A)
+
+private fun on(color: Color) = if (color.luminance() > 0.55f) Color(0xFF111111) else Color.White
+
 @Composable
-fun SecurifyTheme(content: @Composable () -> Unit) {
-    val dark = SystemLook.dark ?: isSystemInDarkTheme()
-    val scheme = rememberDynamicColorScheme(seedColor = SystemLook.accent ?: Color(0xFF006A60), isDark = dark)
-    MaterialExpressiveTheme(colorScheme = scheme, motionScheme = MotionScheme.expressive(), content = content)
+fun SecurifyTheme(darkOverride: Boolean? = null, content: @Composable () -> Unit) {
+    val dark = darkOverride ?: SystemLook.dark ?: isSystemInDarkTheme()
+    val accent = SystemLook.accent ?: Brand
+    val primary = if (dark) lerp(accent, Color.White, 0.3f) else accent
+    // every primary role is derived, otherwise Miuix's blue defaults show through disabled buttons
+    val colors = if (dark) {
+        val base = Color(0xFF242424)
+        darkColorScheme(
+            primary = primary,
+            onPrimary = on(primary),
+            primaryVariant = primary,
+            primaryContainer = lerp(base, primary, 0.35f),
+            onPrimaryContainer = Color(0xFFEDEDED),
+            disabledPrimary = lerp(base, primary, 0.35f),
+            disabledOnPrimary = Color(0xFF8C93B0),
+            disabledPrimaryButton = lerp(base, primary, 0.45f),
+            disabledOnPrimaryButton = Color(0xCCFFFFFF),
+            disabledPrimarySlider = lerp(base, primary, 0.45f),
+            tertiaryContainer = lerp(base, primary, 0.22f),
+            onTertiaryContainer = primary,
+            sliderKeyPointForeground = primary,
+        )
+    } else {
+        val base = Color.White
+        lightColorScheme(
+            primary = primary,
+            onPrimary = on(primary),
+            primaryVariant = primary,
+            primaryContainer = lerp(base, primary, 0.18f),
+            onPrimaryContainer = Color(0xFF111111),
+            disabledPrimary = lerp(base, primary, 0.30f),
+            disabledOnPrimary = Color.White,
+            disabledPrimaryButton = lerp(base, primary, 0.30f),
+            disabledOnPrimaryButton = Color.White,
+            disabledPrimarySlider = lerp(base, primary, 0.35f),
+            tertiaryContainer = lerp(base, primary, 0.12f),
+            onTertiaryContainer = primary,
+            sliderKeyPointForeground = primary,
+        )
+    }
+    MiuixTheme(colors = colors, content = content)
 }

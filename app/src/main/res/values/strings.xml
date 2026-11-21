@@ -58,7 +58,7 @@
     <string name="sub_deleted">“%1$s” deleted</string>
     <string name="manual_group">Manual</string>
     <string name="empty_title">No servers yet</string>
-    <string name="empty_hint">Tap + to add a subscription from the clipboard, a QR code or by hand</string>
+    <string name="empty_hint">Add a subscription from the clipboard, a QR code or by hand</string>
 
     <string name="sub_support">Support</string>
     <string name="sub_web">Subscription page</string>

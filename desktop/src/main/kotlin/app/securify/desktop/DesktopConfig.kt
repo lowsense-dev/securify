@@ -12,22 +12,23 @@ private val notProxy = setOf("freedom", "blackhole", "dns", "loopback")
 private fun isDomain(h: String) = h.any { it.isLetter() } && ':' !in h
 
 /**
- * Turns the shared config into one for a Linux TUN interface that Xray creates itself.
- * Process rules make Xray scan /proc for every new connection, so they're only added for per-app mode.
+ * Turns the shared config into one for a TUN interface that Xray creates itself.
+ * Process rules make Xray scan the process table for every new connection, so they're only added for per-app mode.
  */
 fun desktopConfig(c: JSONObject, server: Server, p: Prefs, dnsToGateway: Boolean): String {
     c.getJSONArray("inbounds").getJSONObject(0).getJSONObject("settings")
-        .put("name", TUN_NAME)
+        .put("name", tunName)
         .put("gateway", JSONArray(listOf("172.19.0.1/30", "fdfe:dcba:9876::1/126")))
         .put("autoSystemRoutingTable", JSONArray(listOf("0.0.0.0/0", "::/0")))
         // Xray binds its own connections to the physical interface and follows network changes
         .put("autoOutboundsInterface", "auto")
-        .put("autoSystemDnsToGateway", dnsToGateway)
+    // the system resolver only gets pointed at the tunnel on Linux
+    if (!Os.windows) c.getJSONArray("inbounds").getJSONObject(0).getJSONObject("settings").put("autoSystemDnsToGateway", dnsToGateway)
     val inbounds = c.getJSONArray("inbounds")
     for (i in 0 until inbounds.length()) {
         val ib = inbounds.getJSONObject(i)
         // Xray runs as root: the socket must be reachable by us, the 0700 data dir keeps other users out
-        if (ib.optString("tag") == "ipcheck") ib.put("listen", ib.getString("listen") + ",0666")
+        if (ib.optString("tag") == "ipcheck" && '/' in ib.getString("listen")) ib.put("listen", ib.getString("listen") + ",0666")
     }
 
     val outbounds = c.getJSONArray("outbounds")

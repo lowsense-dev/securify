@@ -50,7 +50,7 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          ./gradlew :app:assembleRelease :desktop:appImage -PversionName="$VERSION" -PversionCode="$CODE"
+          ./gradlew :shared:test :app:assembleRelease :desktop:appImage :desktop:windowsZip -PversionName="$VERSION" -PversionCode="$CODE"
           rm release.jks
           mkdir dist
           for f in app/build/outputs/apk/release/*.apk; do
@@ -58,7 +58,8 @@ jobs:
             cp "$f" "dist/securify-$VERSION-$abi.apk"
           done
           cp "desktop/build/appimage/securify-$VERSION-x86_64.AppImage" dist/
-          (cd dist && sha256sum *.apk *.AppImage > SHA256SUMS)
+          cp "desktop/build/windows/securify-$VERSION-windows-x64.zip" dist/
+          (cd dist && sha256sum *.apk *.AppImage *.zip > SHA256SUMS)
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -72,6 +73,10 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: securify-dist
@@ -80,4 +85,8 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "Securify $GITHUB_REF_NAME" --generate-notes
+        run: |
+          notes=(--generate-notes)
+          file=".github/release-notes/$GITHUB_REF_NAME.md"
+          if [[ -f "$file" ]]; then notes=(--notes-file "$file"); fi
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "Securify $GITHUB_REF_NAME" "${notes[@]}"

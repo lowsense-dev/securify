@@ -10,6 +10,7 @@ class DesktopApp(val name: String, val process: String)
  * shortcut: Flatpak and Snap apps are skipped, their processes run under sandbox paths; the process field covers them by hand.
  */
 fun desktopApps(): List<DesktopApp> {
+    if (Os.windows) return emptyList()
     val home = System.getProperty("user.home")
     val ru = Locale.getDefault().language == "ru"
     val dirs = (System.getenv("XDG_DATA_DIRS")?.ifBlank { null } ?: "/usr/local/share:/usr/share").split(':') +

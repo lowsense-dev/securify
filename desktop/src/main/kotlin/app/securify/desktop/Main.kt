@@ -6,11 +6,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import app.securify.core.Platform
@@ -24,7 +26,6 @@ import app.securify.ui.SecurifyTheme
 import app.securify.ui.str
 import app.securify.core.VpnState
 import app.securify.vpn.SecurifyVpn
-import java.awt.Dimension
 import java.awt.SystemTray
 import java.awt.Toolkit
 import kotlinx.coroutines.CoroutineScope
@@ -41,9 +42,9 @@ fun main(args: Array<String>) {
         else -> "show"
     }
     Env.data.mkdirs()
-    if (Instance.forward(cmd)) exitProcess(0)
+    if (if (Os.windows) !Instance.lockWindows() else Instance.forward(cmd)) exitProcess(0)
     // matches StartupWMClass, so docks group the window under the menu entry
-    runCatching {
+    if (!Os.windows) runCatching {
         Toolkit.getDefaultToolkit().javaClass.getDeclaredField("awtAppClassName").apply { isAccessible = true }.set(null, "securify")
     }
 
@@ -51,7 +52,7 @@ fun main(args: Array<String>) {
     Platform.appVersion = BuildInfo.VERSION_NAME
     Platform.versionCode = BuildInfo.VERSION_CODE
     Platform.deviceId = Env.deviceId()
-    Platform.os = "Linux"
+    Platform.os = if (Os.windows) "Windows" else "Linux"
     Platform.osVersion = Env.osVersion()
     Platform.model = runCatching { java.io.File("/sys/class/dmi/id/product_name").readText().trim() }.getOrNull()?.ifEmpty { null } ?: "PC"
     autoLabel = str(R.string.auto)
@@ -75,9 +76,9 @@ fun main(args: Array<String>) {
         if (c == "show" || c == "connect") visible = true
     }
     // a unix socket path is limited to 108 bytes; with a longer data dir the app just isn't single-instance
-    runCatching { Instance.listen(onCommand) }
+    if (!Os.windows) runCatching { Instance.listen(onCommand) }
     if (cmd == "connect") onCommand(cmd)
-    val sni = SniTray(onOpen = { visible = true }, onQuit = { exitProcess(0) }).takeIf { it.start() }
+    val sni = if (Os.windows) null else SniTray(onOpen = { visible = true }, onQuit = { exitProcess(0) }).takeIf { it.start() }
     val awtTray = sni == null && SystemTray.isSupported()
     val tray = sni != null || awtTray
     Runtime.getRuntime().addShutdownHook(Thread { SecurifyVpn.closeHelper() })
@@ -101,7 +102,8 @@ fun main(args: Array<String>) {
                 Item(str(R.string.tray_quit), onClick = quit)
             },
         )
-        val windowState = rememberWindowState(size = DpSize(440.dp, 820.dp))
+        // a phone-shaped window, 2:3; the app has no fullscreen or maximized layout
+        val windowState = rememberWindowState(size = DpSize(400.dp, 600.dp), position = WindowPosition(Alignment.Center))
         Window(
             // with no tray to come back from, closing the window quits
             onCloseRequest = { if (tray) visible = false else quit() },
@@ -109,8 +111,22 @@ fun main(args: Array<String>) {
             state = windowState,
             title = "Securify",
             icon = icon,
+            resizable = false,
         ) {
-            LaunchedEffect(Unit) { window.minimumSize = Dimension(360, 560) }
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            LaunchedEffect(Unit, density) {
+                // AWT counts decorations in setSize, so add them back to keep the visible surface at 2:3
+                val insets = window.insets
+                val outer = java.awt.Dimension(
+                    with(density) { 400.dp.roundToPx() } + insets.left + insets.right,
+                    with(density) { 600.dp.roundToPx() } + insets.top + insets.bottom,
+                )
+                window.setSize(outer)
+                // both sides pin the size, so a maximize request has nowhere to go
+                window.minimumSize = outer
+                window.maximumSize = outer
+                window.isResizable = false
+            }
             var shown by remember { mutableStateOf(visible) }
             LaunchedEffect(visible) {
                 if (visible && !shown) window.toFront()

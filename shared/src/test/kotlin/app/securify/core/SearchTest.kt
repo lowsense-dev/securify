@@ -13,7 +13,7 @@ class SearchTest {
 
     @Test
     fun rejectsMissingOrOutOfOrderCharacters() {
-        assertFalse(fuzzyMatch("Frankfurt", "ffr"))
+        assertFalse(fuzzyMatch("Frankfurt", "urtf"))
         assertFalse(fuzzyMatch("Frankfurt", "xyz"))
     }
 

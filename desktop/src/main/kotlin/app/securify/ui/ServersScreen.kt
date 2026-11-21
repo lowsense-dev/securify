@@ -1,5 +1,6 @@
 package app.securify.ui
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,132 +12,119 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.QrCode
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.outlined.Dns
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButtonMenu
-import androidx.compose.material3.FloatingActionButtonMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearWavyProgressIndicator
-import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialShapes
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.ToggleFloatingActionButton
-import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.toShape
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.securify.core.MANUAL_ID
+import app.securify.core.PING_PENDING
 import app.securify.core.Prefs
 import app.securify.core.Server
 import app.securify.core.SortMode
-import app.securify.core.fuzzyMatch
 import app.securify.core.Store
 import app.securify.core.Sub
 import app.securify.core.SubAgent
 import app.securify.core.Subs
-import app.securify.core.MANUAL_ID
-import app.securify.core.PING_PENDING
+import app.securify.core.fuzzyMatch
 import app.securify.core.pingAll
 import app.securify.core.protocolLabel
 import app.securify.core.stopPing
 import app.securify.vpn.SecurifyVpn
 import kotlinx.coroutines.Dispatchers
-import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.DateFormat
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SnackbarHost
+import top.yukonga.miuix.kmp.basic.SnackbarHostState
+import top.yukonga.miuix.kmp.basic.SnackbarResult
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Add
+import top.yukonga.miuix.kmp.icon.extended.Clear
+import top.yukonga.miuix.kmp.icon.extended.Copy
+import top.yukonga.miuix.kmp.icon.extended.Delete
+import top.yukonga.miuix.kmp.icon.extended.Edit
+import top.yukonga.miuix.kmp.icon.extended.Help
+import top.yukonga.miuix.kmp.icon.extended.Layers
+import top.yukonga.miuix.kmp.icon.extended.Link
+import top.yukonga.miuix.kmp.icon.extended.Lock
+import top.yukonga.miuix.kmp.icon.extended.More
+import top.yukonga.miuix.kmp.icon.extended.Paste
+import top.yukonga.miuix.kmp.icon.extended.Pause
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Scan
+import top.yukonga.miuix.kmp.icon.extended.Search
+import top.yukonga.miuix.kmp.icon.extended.Settings
+import top.yukonga.miuix.kmp.icon.extended.Sort
+import top.yukonga.miuix.kmp.icon.extended.Stopwatch
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
+import top.yukonga.miuix.kmp.preference.RadioButtonLocation
+import top.yukonga.miuix.kmp.preference.RadioButtonPreference
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.awt.FileDialog
 import java.awt.Frame
-import javax.imageio.ImageIO
+import java.text.DateFormat
 import java.util.Date
+import javax.imageio.ImageIO
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-/** [split]: shown as a pane next to the home screen, so the list fills it with even margins. */
-fun ServersScreen(modifier: Modifier, split: Boolean = false) {
+fun ServersScreen(modifier: Modifier) {
     val app by Store.state.collectAsState()
     val pings by Store.pings.collectAsState()
     val scope = rememberCoroutineScope()
     val snack = remember { SnackbarHostState() }
     var refreshing by remember { mutableStateOf(emptySet<String>()) }
     var importing by remember { mutableStateOf(false) }
-    var fabOpen by rememberSaveable { mutableStateOf(false) }
+    var addOpen by rememberSaveable { mutableStateOf(false) }
+    var sortOpen by rememberSaveable { mutableStateOf(false) }
     var manual by rememberSaveable { mutableStateOf(false) }
-    var sortMenu by remember { mutableStateOf(false) }
     var searching by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val searchFocus = remember { FocusRequester() }
@@ -153,8 +141,6 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
     val page = subs.getOrNull(pager.currentPage)
     val list = page?.let { sortServers(it.servers, app.prefs.sort, pings) }.orEmpty().filter { fuzzyMatch(it.name, searchQuery) }
     LaunchedEffect(searching) { if (searching) searchFocus.requestFocus() }
-    val scroll = TopAppBarDefaults.pinnedScrollBehavior()
-    val landscape = isLandscape()
 
     fun runImport(text: String, hwid: Boolean? = null, agent: SubAgent? = null, customHwid: String = "") {
         scope.launch {
@@ -199,104 +185,91 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
         if (text != null) import(text) else scope.launch { snack.showSnackbar(str(R.string.qr_not_found)) }
     }
 
+    fun pingAllServers(sub: Sub) {
+        pingAll(sortServers(sub.servers, app.prefs.sort, pings), app.prefs.ping, app.prefs.pingUrl)
+    }
 
     Scaffold(
-        modifier.nestedScroll(scroll.nestedScrollConnection),
+        modifier = modifier,
         snackbarHost = { SnackbarHost(snack) },
         topBar = {
             ScreenTopBar(
                 title = stringResource(R.string.tab_servers),
                 subtitle = if (searching) null else pluralStringResource(R.plurals.servers, list.size, list.size),
-                titleContent = if (searching) {
-                    { ServerSearchField(searchQuery, { searchQuery = it }, searchFocus) }
-                } else null,
-                scroll = scroll,
                 actions = {
                     if (searching) {
                         IconButton(onClick = { searching = false; searchQuery = "" }) {
-                            Icon(Icons.Filled.Close, stringResource(R.string.close))
+                            Icon(MiuixIcons.Clear, stringResource(R.string.close), Modifier.size(20.dp))
                         }
                     } else {
                         IconButton(enabled = list.isNotEmpty(), onClick = { searching = true }) {
-                            Icon(Icons.Filled.Search, stringResource(R.string.search_servers))
+                            Icon(MiuixIcons.Search, stringResource(R.string.search_servers), Modifier.size(20.dp))
                         }
-                        Box {
-                            IconButton(onClick = { sortMenu = true }) { Icon(Icons.AutoMirrored.Filled.Sort, stringResource(R.string.sort)) }
-                            DropdownMenu(sortMenu, onDismissRequest = { sortMenu = false }) {
-                                listOf(SortMode.ORIGIN to R.string.sort_origin, SortMode.NAME to R.string.sort_name, SortMode.PING to R.string.sort_ping)
-                                    .forEach { (mode, label) ->
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(label)) },
-                                            leadingIcon = { if (app.prefs.sort == mode) Icon(Icons.Filled.Check, null) },
-                                            onClick = { Store.prefs { it.copy(sort = mode) }; sortMenu = false },
-                                        )
-                                    }
+                        IconButton(onClick = { sortOpen = true }) {
+                            Icon(MiuixIcons.Sort, stringResource(R.string.sort), Modifier.size(20.dp))
+                        }
+                        if (pings.containsValue(PING_PENDING)) {
+                            IconButton(onClick = { stopPing() }) {
+                                Icon(MiuixIcons.Pause, stringResource(R.string.ping_stop), Modifier.size(20.dp))
                             }
                         }
-                        if (pings.containsValue(PING_PENDING)) IconButton(onClick = { stopPing() }) {
-                            Icon(Icons.Filled.Stop, stringResource(R.string.ping_stop))
+                        if (importing) {
+                            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(Modifier.size(18.dp), progress = null, strokeWidth = 2.dp)
+                            }
+                        } else {
+                            IconButton(onClick = { addOpen = true }) {
+                                Icon(MiuixIcons.Add, stringResource(R.string.add), Modifier.size(22.dp))
+                            }
                         }
-                        else IconButton(
-                            enabled = list.isNotEmpty(),
-                            onClick = { pingAll(list, app.prefs.ping, app.prefs.pingUrl) },
-                        ) { Icon(Icons.Filled.Speed, stringResource(R.string.ping_all)) }
                     }
                 },
             )
         },
-        floatingActionButton = {
-            FloatingActionButtonMenu(
-                expanded = fabOpen,
-                button = {
-                    ToggleFloatingActionButton(checked = fabOpen, onCheckedChange = { fabOpen = it }) {
-                        val icon by remember { derivedStateOf { if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.Filled.Add } }
-                        if (importing && !fabOpen) LoadingIndicator(Modifier.size(28.dp))
-                        else Icon(rememberVectorPainter(icon), stringResource(R.string.add), Modifier.animateIcon({ checkedProgress }))
-                    }
-                },
-            ) {
-                FloatingActionButtonMenuItem(
-                    onClick = { fabOpen = false; import(clipboardText()?.takeIf { it.isNotBlank() } ?: clipboardImage()?.let(::decodeQr)) },
-                    icon = { Icon(Icons.Filled.ContentPaste, null) },
-                    text = { Text(stringResource(R.string.import_clipboard)) },
-                )
-                FloatingActionButtonMenuItem(
-                    onClick = {
-                        fabOpen = false
-                        importQrFile()
-                    },
-                    icon = { Icon(Icons.Filled.QrCodeScanner, null) },
-                    text = { Text(stringResource(R.string.import_qr_image)) },
-                )
-                FloatingActionButtonMenuItem(
-                    onClick = { fabOpen = false; manual = true },
-                    icon = { Icon(Icons.Filled.Edit, null) },
-                    text = { Text(stringResource(R.string.import_manual)) },
-                )
-            }
-        },
     ) { pad ->
         Column(Modifier.padding(pad)) {
+            if (searching) {
+                TextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).focusRequester(searchFocus),
+                    label = stringResource(R.string.search_servers),
+                    useLabelAsPlaceholder = true,
+                    singleLine = true,
+                    leadingIcon = { Icon(MiuixIcons.Search, null, Modifier.size(18.dp), tint = MiuixTheme.colorScheme.onSurfaceVariantSummary) },
+                    trailingIcon = {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(MiuixIcons.Clear, null, Modifier.size(18.dp), tint = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                        }
+                    },
+                )
+            }
             if (subs.size > 1) SubTabs(subs, page?.id) { id ->
                 scope.launch { pager.animateScrollToPage(subs.indexOfFirst { it.id == id }) }
             }
-            if (subs.isEmpty()) EmptyState()
-            else HorizontalPager(pager, Modifier.weight(1f), key = { subs.getOrNull(it)?.id ?: it }) { index ->
-                val sub = subs.getOrNull(index) ?: return@HorizontalPager
-                val servers = sortServers(sub.servers, app.prefs.sort, pings).filter { fuzzyMatch(it.name, searchQuery) }
-                LazyColumn(
-                    if (split) Modifier.fillMaxSize() else Modifier.centeredContent(),
-                    contentPadding = PaddingValues(start = 16.dp, end = if (landscape && !split) 104.dp else 16.dp, bottom = 120.dp),
-                ) {
+            if (subs.isEmpty()) {
+                EmptyState(onAdd = { addOpen = true })
+            } else {
+                HorizontalPager(pager, Modifier.weight(1f), key = { subs.getOrNull(it)?.id ?: it }) { index ->
+                    val sub = subs.getOrNull(index) ?: return@HorizontalPager
+                    val servers = sortServers(sub.servers, app.prefs.sort, pings).filter { fuzzyMatch(it.name, searchQuery) }
+                    LazyColumn(
+                        Modifier.centeredContent(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
+                    ) {
                         item(key = "sub:" + sub.id) {
                             SubPanel(
                                 sub,
                                 refreshing = sub.id in refreshing,
                                 onRefresh = { refresh(listOf(sub)) },
+                                onPing = { pingAllServers(sub) },
                                 onDelete = {
                                     Store.removeSub(sub.id)
                                     scope.launch {
-                                        val r = snack.showSnackbar(str(R.string.sub_deleted, sub.title.ifEmpty { str(R.string.manual_group) }), str(R.string.undo))
+                                        val r = snack.showSnackbar(
+                                            str(R.string.sub_deleted, sub.title.ifEmpty { str(R.string.manual_group) }),
+                                            str(R.string.undo),
+                                        )
                                         if (r == SnackbarResult.ActionPerformed) Store.putSub(sub)
                                     }
                                 },
@@ -308,7 +281,7 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
                             item(key = a.key) {
                                 ServerRow(
                                     a, first = true, last = true, selected = a.key == app.selected?.key, ping = null,
-                                    modifier = Modifier.animateItem().padding(bottom = 6.dp),
+                                    modifier = Modifier.animateItem().padding(bottom = 8.dp),
                                 ) {
                                     if (a.key != app.selected?.key) {
                                         Store.prefs { it.copy(selected = a.key) }
@@ -330,8 +303,26 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
                             }
                         }
                     }
+                }
             }
         }
+    }
+
+    if (addOpen) {
+        AddDialog(
+            onDismiss = { addOpen = false },
+            onClipboard = { addOpen = false; import(clipboardText()?.takeIf { it.isNotBlank() } ?: clipboardImage()?.let(::decodeQr)) },
+            onQrImage = { addOpen = false; importQrFile() },
+            onManual = { addOpen = false; manual = true },
+        )
+    }
+
+    if (sortOpen) {
+        SortDialog(
+            current = app.prefs.sort,
+            onDismiss = { sortOpen = false },
+            onSelect = { mode -> Store.prefs { it.copy(sort = mode) }; sortOpen = false },
+        )
     }
 
     if (manual) ManualDialog(onDismiss = { manual = false }) { manual = false; import(it) }
@@ -370,35 +361,6 @@ fun ServersScreen(modifier: Modifier, split: Boolean = false) {
 }
 
 @Composable
-private fun <T> SettingPicker(label: String, options: List<Pair<T, String>>, value: T, first: Boolean, last: Boolean, onSelect: (T) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Surface(
-        shape = segmentShape(first, last),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
-    ) {
-        Row(Modifier.padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            Box {
-                TextButton(onClick = { open = true }) {
-                    Text(options.firstOrNull { it.first == value }?.second.orEmpty(), maxLines = 1)
-                    Icon(Icons.Filled.ArrowDropDown, null)
-                }
-                DropdownMenu(open, onDismissRequest = { open = false }) {
-                    options.forEach { (option, text) ->
-                        DropdownMenuItem(
-                            text = { Text(text) },
-                            leadingIcon = { if (option == value) Icon(Icons.Filled.Check, null) },
-                            onClick = { open = false; onSelect(option) },
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun SubSettingsDialog(
     title: String,
     initial: Sub?,
@@ -407,82 +369,88 @@ private fun SubSettingsDialog(
     onDismiss: () -> Unit,
     onSave: (String, String, Boolean?, SubAgent?, String) -> Unit,
 ) {
-    val hwidOptions = listOf<Pair<Boolean?, String>>(
-        null to stringResource(R.string.follow_app),
-        true to stringResource(R.string.hwid_on),
-        false to stringResource(R.string.hwid_off),
+    val hwidOptions = listOf(
+        stringResource(R.string.follow_app),
+        stringResource(R.string.hwid_on),
+        stringResource(R.string.hwid_off),
     )
-    val agentOptions = listOf<Pair<SubAgent?, String>>(
-        null to stringResource(R.string.follow_app),
-        SubAgent.SECURIFY to "Securify",
-        SubAgent.V2RAYNG to "v2rayNG",
-        SubAgent.HAPP to "Happ",
+    val agentOptions = listOf(
+        stringResource(R.string.follow_app),
+        "Securify", "v2rayNG", "Happ",
     )
     var name by remember(initial?.id) { mutableStateOf(initial?.title ?: "") }
     var url by remember(initial?.id) { mutableStateOf(initial?.url ?: "") }
     var hwid by remember(initial?.id) { mutableStateOf(initial?.hwid) }
     var agent by remember(initial?.id) { mutableStateOf(initial?.agent) }
     var custom by remember(initial?.id) { mutableStateOf(initial?.customHwid ?: "") }
-    val fieldShape = RoundedCornerShape(20.dp)
     val validUrl = initial?.url?.isNotEmpty() != true || url.trim().let { it.startsWith("http://") || it.startsWith("https://") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        title = { Text(title) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                if (!isNew && initial != null) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        singleLine = true,
-                        shape = fieldShape,
-                        label = { Text(stringResource(R.string.sub_name)) },
-                        placeholder = { Text(initial.name.ifEmpty { stringResource(R.string.manual_group) }) },
+
+    AppDialog(
+        title = title,
+        onDismiss = onDismiss,
+    ) {
+        Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+            if (!isNew && initial != null) {
+                TextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = stringResource(R.string.sub_name),
+                    singleLine = true,
+                )
+                if (initial.url.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    TextField(
+                        value = url,
+                        onValueChange = { url = it },
                         modifier = Modifier.fillMaxWidth(),
-                    )
-                    if (initial.url.isNotEmpty()) {
-                        Spacer(Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = url,
-                            onValueChange = { url = it },
-                            singleLine = true,
-                            shape = fieldShape,
-                            label = { Text(stringResource(R.string.sub_url)) },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                    Spacer(Modifier.height(12.dp))
-                }
-                SettingPicker(stringResource(R.string.hwid), hwidOptions, hwid, first = true, last = false) { hwid = it }
-                SettingPicker(stringResource(R.string.agent), agentOptions, agent, first = false, last = true) { agent = it }
-                if (hwid ?: prefs.hwid) {
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = custom,
-                        onValueChange = { custom = it },
+                        label = stringResource(R.string.sub_url),
                         singleLine = true,
-                        shape = fieldShape,
-                        label = { Text(stringResource(R.string.custom_hwid)) },
-                        placeholder = { Text(stringResource(R.string.custom_hwid_auto)) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(
-                        stringResource(R.string.custom_hwid_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp),
                     )
                 }
+                Spacer(Modifier.height(12.dp))
             }
-        },
-        confirmButton = {
-            TextButton(enabled = validUrl, onClick = { onSave(name, url.trim(), hwid, agent, custom.trim()) }) {
-                Text(stringResource(if (isNew) R.string.add else R.string.save))
+            PrefGroup {
+                OverlayDropdownPreference(
+                    items = hwidOptions,
+                    selectedIndex = when (hwid) { null -> 0; true -> 1; false -> 2 },
+                    title = stringResource(R.string.hwid),
+                    renderInRootScaffold = false,
+                    onSelectedIndexChange = { i -> hwid = when (i) { 0 -> null; 1 -> true; else -> false } },
+                )
+                RowDivider()
+                OverlayDropdownPreference(
+                    items = agentOptions,
+                    selectedIndex = agent?.let { it.ordinal + 1 } ?: 0,
+                    title = stringResource(R.string.agent),
+                    renderInRootScaffold = false,
+                    onSelectedIndexChange = { i -> agent = if (i == 0) null else SubAgent.entries[i - 1] },
+                )
             }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
+            if (hwid ?: prefs.hwid) {
+                Spacer(Modifier.height(12.dp))
+                TextField(
+                    value = custom,
+                    onValueChange = { custom = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = stringResource(R.string.custom_hwid),
+                    singleLine = true,
+                )
+                Text(
+                    stringResource(R.string.custom_hwid_hint),
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.padding(start = 4.dp, top = 6.dp),
+                )
+            }
+        }
+        DialogButtons(
+            confirm = stringResource(if (isNew) R.string.add else R.string.save),
+            enabled = validUrl,
+            onConfirm = { onSave(name, url.trim(), hwid, agent, custom.trim()) },
+            onDismiss = onDismiss,
+        )
+    }
 }
 
 @Composable
@@ -502,48 +470,34 @@ private fun SubTabs(subs: List<Sub>, current: String?, onSelect: (String) -> Uni
     }
     LazyRow(
         state = rowState,
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(order, key = { it.id }) { s ->
             ReorderableItem(reorder, key = s.id) { dragging ->
-                val scale by animateFloatAsState(if (dragging) 1.08f else 1f)
-                ToggleButton(
-                    checked = s.id == current,
-                    onCheckedChange = { onSelect(s.id) },
+                val scale by animateFloatAsState(if (dragging) 1.05f else 1f)
+                val selected = s.id == current
+                val colors = if (selected) ButtonDefaults.buttonColors(color = MiuixTheme.colorScheme.primary, contentColor = MiuixTheme.colorScheme.onPrimary)
+                else ButtonDefaults.buttonColors(color = MiuixTheme.colorScheme.secondaryContainer, contentColor = MiuixTheme.colorScheme.onSurface)
+                Button(
+                    onClick = { onSelect(s.id) },
                     modifier = Modifier
                         .graphicsLayer { scaleX = scale; scaleY = scale }
                         .longPressDraggableHandle(
                             onDragStarted = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
                             onDragStopped = { Store.reorderSubs(order.map { it.id }) },
                         ),
+                    colors = colors,
+                    cornerRadius = 50.dp,
+                    minWidth = 0.dp,
+                    minHeight = 34.dp,
+                    insideMargin = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
                 ) {
-                    Text(subTitle(s), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp))
+                    Text(subTitle(s), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp), style = MiuixTheme.textStyles.footnote1)
                 }
             }
         }
     }
-}
-
-@Composable
-private fun ServerSearchField(query: String, onQueryChange: (String) -> Unit, focus: FocusRequester) {
-    val style = MaterialTheme.typography.titleLarge
-    BasicTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = Modifier.fillMaxWidth().focusRequester(focus),
-        singleLine = true,
-        textStyle = style.copy(color = MaterialTheme.colorScheme.onSurface),
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { defaultKeyboardAction(ImeAction.Search) }),
-        decorationBox = { innerTextField ->
-            Box(contentAlignment = Alignment.CenterStart) {
-                if (query.isEmpty()) Text(stringResource(R.string.search_servers), style = style, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                innerTextField()
-            }
-        },
-    )
 }
 
 fun sortServers(list: List<Server>, sort: SortMode, pings: Map<String, Long>): List<Server> = when (sort) {
@@ -552,177 +506,316 @@ fun sortServers(list: List<Server>, sort: SortMode, pings: Map<String, Long>): L
     SortMode.PING -> list.sortedBy { s -> pings[s.key]?.takeIf { it >= 0 } ?: Long.MAX_VALUE }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun EmptyState() {
+private fun EmptyState(onAdd: () -> Unit) {
     Column(
         Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Box(
-            Modifier.size(120.dp).clip(MaterialShapes.Cookie7Sided.toShape()).background(MaterialTheme.colorScheme.primaryContainer),
+            Modifier.size(88.dp).clip(RoundedCornerShape(28.dp)).background(MiuixTheme.colorScheme.tertiaryContainer),
             contentAlignment = Alignment.Center,
-        ) { Icon(Icons.Outlined.Dns, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer) }
-        Text(stringResource(R.string.empty_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 24.dp))
+        ) { Icon(MiuixIcons.Layers, null, Modifier.size(36.dp), tint = MiuixTheme.colorScheme.primary) }
+        Text(stringResource(R.string.empty_title), style = MiuixTheme.textStyles.title4, modifier = Modifier.padding(top = 20.dp))
         Text(
             stringResource(R.string.empty_hint),
-            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp),
+            style = MiuixTheme.textStyles.body2, color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp),
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun SubPanel(sub: Sub, refreshing: Boolean, onRefresh: () -> Unit, onDelete: () -> Unit, onSettings: (Sub) -> Unit, modifier: Modifier) {
-    val c = MaterialTheme.colorScheme
-    val info = sub.info
-    var menu by remember { mutableStateOf(false) }
-    var qr by remember { mutableStateOf(false) }
-    if (qr) QrDialog(subTitle(sub), sub.url) { qr = false }
-    Surface(
-        shape = RoundedCornerShape(28.dp), color = c.secondaryContainer,
-        modifier = modifier.fillMaxWidth().padding(top = 16.dp, bottom = 6.dp),
-    ) {
-        Column(Modifier.padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f).padding(top = 6.dp)) {
-                    Text(subTitle(sub), style = MaterialTheme.typography.titleLargeEmphasized, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    val updated = if (sub.updatedAt > 0) " · " + relativeTime(sub.updatedAt) else ""
-                    Text(
-                        pluralStringResource(R.plurals.servers, sub.servers.size, sub.servers.size) + updated,
-                        style = MaterialTheme.typography.bodySmall, color = c.onSecondaryContainer.copy(alpha = 0.75f),
-                    )
-                }
-                if (sub.url.isNotEmpty()) {
-                    if (refreshing) LoadingIndicator(Modifier.size(48.dp))
-                    else IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, stringResource(R.string.refresh)) }
-                }
-                Box {
-                    IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, null) }
-                    DropdownMenu(menu, onDismissRequest = { menu = false }) {
-                        info.supportUrl?.let { url ->
-                            DropdownMenuItem(text = { Text(stringResource(R.string.sub_support)) }, onClick = { menu = false; openUrl(url) })
-                        }
-                        info.webPageUrl?.let { url ->
-                            DropdownMenuItem(text = { Text(stringResource(R.string.sub_web)) }, onClick = { menu = false; openUrl(url) })
-                        }
-                        if (sub.url.isNotEmpty()) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.copy_link)) },
-                                leadingIcon = { Icon(Icons.Filled.ContentCopy, null) },
-                                onClick = { menu = false; copyText(sub.title, sub.url, sensitive = true) },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.show_qr)) },
-                                leadingIcon = { Icon(Icons.Filled.QrCode, null) },
-                                onClick = { menu = false; qr = true },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.copy_hwid)) },
-                                leadingIcon = { Icon(Icons.Filled.Fingerprint, null) },
-                                onClick = { menu = false; copyText("HWID", Subs.hwid(sub.url, sub.customHwid)) },
-                            )
-                        }
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.sub_settings)) },
-                            onClick = { menu = false; onSettings(sub) }
-                        )
-                        DropdownMenuItem(text = { Text(stringResource(R.string.delete)) }, onClick = { menu = false; onDelete() })
-                    }
-                }
-            }
-            Column(Modifier.padding(end = 12.dp)) {
-                info.announce?.let {
-                    Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 10.dp))
-                }
-                val used = info.upload + info.download
-                if (info.total > 0) {
-                    LinearWavyProgressIndicator(
-                        progress = { (used.toFloat() / info.total).coerceIn(0f, 1f) },
-                        color = c.primary, trackColor = c.onSecondaryContainer.copy(alpha = 0.15f),
-                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                    )
-                    Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                        Text(
-                            stringResource(R.string.traffic_left, bytes((info.total - used).coerceAtLeast(0))),
-                            style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            stringResource(R.string.traffic_of, bytes(used), bytes(info.total)),
-                            style = MaterialTheme.typography.labelMedium, color = c.onSecondaryContainer.copy(alpha = 0.75f),
-                        )
-                    }
-                } else if (sub.url.isNotEmpty() && used > 0) {
-                    Text(
-                        stringResource(R.string.traffic_unlimited, bytes(used)),
-                        style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 12.dp),
-                    )
-                }
-                if (info.expire > 0) {
-                    val ms = info.expire * 1000
-                    val days = ((ms - System.currentTimeMillis()) / 86_400_000L).toInt()
-                    val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(ms))
-                    Text(
-                        if (ms < System.currentTimeMillis()) stringResource(R.string.expired, date)
-                        else stringResource(R.string.expires, date) + " · " + pluralStringResource(R.plurals.days_left, days, days),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (days < 3) c.error else c.onSecondaryContainer,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
-            }
+        Button(
+            onClick = onAdd,
+            modifier = Modifier.padding(top = 20.dp),
+            colors = ButtonDefaults.buttonColorsPrimary(),
+        ) {
+            Icon(MiuixIcons.Add, null, Modifier.size(18.dp))
+            Text(stringResource(R.string.add_subscription), Modifier.padding(start = 8.dp))
         }
     }
 }
 
+@Composable
+private fun SubPanel(
+    sub: Sub,
+    refreshing: Boolean,
+    onRefresh: () -> Unit,
+    onPing: () -> Unit,
+    onDelete: () -> Unit,
+    onSettings: (Sub) -> Unit,
+    modifier: Modifier,
+) {
+    val c = MiuixTheme.colorScheme
+    val info = sub.info
+    var menu by remember { mutableStateOf(false) }
+    var qr by remember { mutableStateOf(false) }
+    if (qr) QrDialog(subTitle(sub), sub.url) { qr = false }
+    if (menu) {
+        SubMenuDialog(
+            sub = sub,
+            onDismiss = { menu = false },
+            onQr = { qr = true },
+            onPing = onPing,
+            onSettings = { onSettings(sub) },
+            onDelete = onDelete,
+        )
+    }
+    Card(
+        modifier = modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
+        cornerRadius = 18.dp,
+        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(subTitle(sub), style = MiuixTheme.textStyles.title4, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                val updated = if (sub.updatedAt > 0) " · " + relativeTime(sub.updatedAt) else ""
+                Text(
+                    pluralStringResource(R.plurals.servers, sub.servers.size, sub.servers.size) + updated,
+                    style = MiuixTheme.textStyles.footnote1, color = c.onSurfaceVariantSummary,
+                )
+            }
+            if (sub.url.isNotEmpty()) {
+                if (refreshing) Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(Modifier.size(18.dp), progress = null, strokeWidth = 2.dp)
+                } else IconButton(onClick = onRefresh) {
+                    Icon(MiuixIcons.Refresh, stringResource(R.string.refresh), Modifier.size(20.dp))
+                }
+            }
+            IconButton(onClick = { menu = true }) { Icon(MiuixIcons.More, null, Modifier.size(20.dp)) }
+        }
+        info.announce?.let {
+            Text(
+                it,
+                style = MiuixTheme.textStyles.footnote1,
+                color = c.onSurfaceVariantSummary,
+                maxLines = 2, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+        val used = info.upload + info.download
+        if (info.total > 0) {
+            LinearProgressIndicator(
+                Modifier.fillMaxWidth().padding(top = 14.dp),
+                progress = (used.toFloat() / info.total).coerceIn(0f, 1f),
+                height = 4.dp,
+            )
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.traffic_left, bytes((info.total - used).coerceAtLeast(0))),
+                    style = MiuixTheme.textStyles.footnote1, modifier = Modifier.weight(1f),
+                )
+                Text(
+                    stringResource(R.string.traffic_of, bytes(used), bytes(info.total)),
+                    style = MiuixTheme.textStyles.footnote2, color = c.onSurfaceVariantSummary,
+                )
+            }
+        } else if (sub.url.isNotEmpty() && used > 0) {
+            Text(
+                stringResource(R.string.traffic_unlimited, bytes(used)),
+                style = MiuixTheme.textStyles.footnote1, modifier = Modifier.padding(top = 10.dp),
+            )
+        }
+        if (info.expire > 0) {
+            val ms = info.expire * 1000
+            val days = ((ms - System.currentTimeMillis()) / 86_400_000L).toInt()
+            val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(ms))
+            Text(
+                if (ms < System.currentTimeMillis()) stringResource(R.string.expired, date)
+                else stringResource(R.string.expires, date) + " · " + pluralStringResource(R.plurals.days_left, days, days),
+                style = MiuixTheme.textStyles.footnote1,
+                color = if (days < 3) c.error else c.onSurfaceVariantSummary,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SubMenuDialog(
+    sub: Sub,
+    onDismiss: () -> Unit,
+    onQr: () -> Unit,
+    onPing: () -> Unit,
+    onSettings: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val info = sub.info
+    val c = MiuixTheme.colorScheme
+    fun act(f: () -> Unit) {
+        onDismiss()
+        f()
+    }
+    AppDialog(title = subTitle(sub), onDismiss = onDismiss) {
+        Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())) {
+            PrefGroup {
+                info.supportUrl?.let { url ->
+                    BasicComponent(title = stringResource(R.string.sub_support), startAction = { ActionIcon(MiuixIcons.Help) }, onClick = { act { openUrl(url) } })
+                    RowDivider()
+                }
+                info.webPageUrl?.let { url ->
+                    BasicComponent(title = stringResource(R.string.sub_web), startAction = { ActionIcon(MiuixIcons.Link) }, onClick = { act { openUrl(url) } })
+                    RowDivider()
+                }
+                if (sub.url.isNotEmpty()) {
+                    BasicComponent(
+                        title = stringResource(R.string.copy_link),
+                        startAction = { ActionIcon(MiuixIcons.Copy) },
+                        onClick = { act { copyText(sub.title, sub.url, sensitive = true) } },
+                    )
+                    RowDivider()
+                    BasicComponent(
+                        title = stringResource(R.string.show_qr),
+                        startAction = { ActionIcon(MiuixIcons.Scan) },
+                        onClick = { act(onQr) },
+                    )
+                    RowDivider()
+                    BasicComponent(
+                        title = stringResource(R.string.copy_hwid),
+                        startAction = { ActionIcon(MiuixIcons.Lock) },
+                        onClick = { act { copyText("HWID", Subs.hwid(sub.url, sub.customHwid)) } },
+                    )
+                    RowDivider()
+                }
+                BasicComponent(
+                    title = stringResource(R.string.ping_all),
+                    startAction = { ActionIcon(MiuixIcons.Stopwatch) },
+                    onClick = { act(onPing) },
+                )
+                RowDivider()
+                BasicComponent(
+                    title = stringResource(R.string.sub_settings),
+                    startAction = { ActionIcon(MiuixIcons.Settings) },
+                    onClick = { act(onSettings) },
+                )
+                RowDivider()
+                BasicComponent(
+                    title = stringResource(R.string.delete),
+                    titleColor = BasicComponentDefaults.titleColor(color = c.error),
+                    startAction = { ActionIcon(MiuixIcons.Delete, c.error) },
+                    onClick = { act(onDelete) },
+                )
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
+            TextButton(stringResource(R.string.close), onDismiss)
+        }
+    }
+}
+
+@Composable
+private fun ActionIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: androidx.compose.ui.graphics.Color = MiuixTheme.colorScheme.onSurface) {
+    Icon(icon, null, Modifier.size(20.dp), tint = tint)
+}
 
 @Composable
 private fun ServerRow(
     s: Server, first: Boolean, last: Boolean, selected: Boolean, ping: Long?,
     modifier: Modifier, onClick: () -> Unit,
 ) {
-    val c = MaterialTheme.colorScheme
+    val c = MiuixTheme.colorScheme
     val shape = segmentShape(first, last)
     val auto = s.group.isNotEmpty()
     var menu by remember { mutableStateOf(false) }
     var qr by remember { mutableStateOf(false) }
     if (qr) QrDialog(s.name, s.key) { qr = false }
-    Box(modifier.fillMaxWidth().padding(vertical = 1.dp)) {
-        Surface(
-            shape = shape,
-            color = if (selected) c.primaryContainer else c.surfaceContainer,
-            modifier = Modifier.fillMaxWidth().clip(shape)
-                .combinedClickable(onLongClick = if (auto) null else ({ menu = true }), onClick = onClick),
-        ) {
-            Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    if (menu) {
+        AppDialog(title = s.name, onDismiss = { menu = false }) {
+            PrefGroup {
+                BasicComponent(
+                    title = stringResource(R.string.copy_link),
+                    startAction = { ActionIcon(MiuixIcons.Copy) },
+                    onClick = { menu = false; copyText(s.name, s.key, sensitive = true) },
+                )
+                RowDivider()
+                BasicComponent(
+                    title = stringResource(R.string.show_qr),
+                    startAction = { ActionIcon(MiuixIcons.Scan) },
+                    onClick = { menu = false; qr = true },
+                )
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
+                TextButton(stringResource(R.string.close), { menu = false })
+            }
+        }
+    }
+    Row(
+        modifier.fillMaxWidth()
+            .clip(shape)
+            .background(if (selected) c.tertiaryContainer else c.surfaceContainer)
+            .combinedClickable(onLongClick = if (auto) null else ({ menu = true }), onClick = onClick),
+    ) {
+        Column {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
                 ProtocolBadge(s.protocol, selected)
                 Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                     Text(
                         if (auto) stringResource(R.string.auto) else s.name,
-                        style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = MiuixTheme.textStyles.body1, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         if (auto) stringResource(R.string.auto_hint, s.group.size)
                         else listOf(protocolLabel(s.protocol), s.transport, s.security).filter { it.isNotEmpty() && it != "none" }.joinToString(" · "),
-                        style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
+                        style = MiuixTheme.textStyles.footnote1, color = c.onSurfaceVariantSummary,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }
                 PingLabel(ping)
             }
+            if (!last) top.yukonga.miuix.kmp.basic.HorizontalDivider(
+                Modifier.padding(start = 14.dp),
+                color = c.dividerLine,
+            )
         }
-        DropdownMenu(menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.copy_link)) },
-                leadingIcon = { Icon(Icons.Filled.ContentCopy, null) },
-                onClick = { menu = false; copyText(s.name, s.key, sensitive = true) },
+    }
+}
+
+@Composable
+private fun AddDialog(onDismiss: () -> Unit, onClipboard: () -> Unit, onQrImage: () -> Unit, onManual: () -> Unit) {
+    AppDialog(title = stringResource(R.string.add_subscription), onDismiss = onDismiss) {
+        PrefGroup {
+            BasicComponent(
+                title = stringResource(R.string.import_clipboard),
+                startAction = { ActionIcon(MiuixIcons.Paste) },
+                onClick = onClipboard,
             )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.show_qr)) },
-                leadingIcon = { Icon(Icons.Filled.QrCode, null) },
-                onClick = { menu = false; qr = true },
+            RowDivider()
+            BasicComponent(
+                title = stringResource(R.string.import_qr_image),
+                startAction = { ActionIcon(MiuixIcons.Scan) },
+                onClick = onQrImage,
             )
+            RowDivider()
+            BasicComponent(
+                title = stringResource(R.string.import_manual),
+                startAction = { ActionIcon(MiuixIcons.Edit) },
+                onClick = onManual,
+            )
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
+            TextButton(stringResource(R.string.cancel), onDismiss)
+        }
+    }
+}
+
+@Composable
+private fun SortDialog(current: SortMode, onDismiss: () -> Unit, onSelect: (SortMode) -> Unit) {
+    AppDialog(title = stringResource(R.string.sort), onDismiss = onDismiss) {
+        PrefGroup {
+            listOf(
+                SortMode.ORIGIN to R.string.sort_origin,
+                SortMode.NAME to R.string.sort_name,
+                SortMode.PING to R.string.sort_ping,
+            ).forEachIndexed { i, (mode, label) ->
+                if (i > 0) RowDivider()
+                RadioButtonPreference(
+                    title = stringResource(label),
+                    selected = mode == current,
+                    onClick = { onSelect(mode) },
+                    radioButtonLocation = RadioButtonLocation.End,
+                )
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
+            TextButton(stringResource(R.string.cancel), onDismiss)
         }
     }
 }
@@ -730,19 +823,24 @@ private fun ServerRow(
 @Composable
 private fun ManualDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
     var text by rememberSaveable { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Filled.Edit, null) },
-        title = { Text(stringResource(R.string.import_manual)) },
-        text = {
-            Column {
-                Text(stringResource(R.string.manual_hint), style = MaterialTheme.typography.bodyMedium)
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), minLines = 3, maxLines = 8,
-                    placeholder = { Text("https://… / vless://…") })
-            }
-        },
-        confirmButton = { TextButton(onClick = { onAdd(text) }, enabled = text.isNotBlank()) { Text(stringResource(R.string.add)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
+    AppDialog(
+        title = stringResource(R.string.import_manual),
+        summary = stringResource(R.string.manual_hint),
+        onDismiss = onDismiss,
+    ) {
+        TextField(
+            value = text,
+            onValueChange = { text = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = "https://… / vless://…",
+            minLines = 3,
+            maxLines = 8,
+        )
+        DialogButtons(
+            confirm = stringResource(R.string.add),
+            enabled = text.isNotBlank(),
+            onConfirm = { onAdd(text) },
+            onDismiss = onDismiss,
+        )
+    }
 }

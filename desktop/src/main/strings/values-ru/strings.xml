@@ -3,6 +3,7 @@
     <string name="error_auth">Не удалось получить права администратора: %s</string>
     <string name="error_auth_cancelled">Ввод пароля отменён</string>
     <string name="error_no_pkexec">Нет pkexec. Установите polkit и запустите polkit-агент, чтобы создать TUN-интерфейс.</string>
+    <string name="error_xray_stop_timeout">Xray не успел завершиться</string>
     <string name="error_xray_exited">Xray остановился: %s</string>
     <string name="error_start_timeout">Xray не запустился вовремя</string>
     <string name="tray_open">Открыть Securify</string>
@@ -20,5 +21,6 @@
     <string name="update_restart">Перезапускаю новую версию…</string>
     <string name="copy_log">Скопировать журнал</string>
     <string name="password_title">Пароль администратора</string>
+    <string name="password_field">Пароль</string>
     <string name="password_wrong">Неверный пароль, попробуйте ещё раз</string>
 </resources>

@@ -5,10 +5,13 @@ import java.io.File
 import java.net.StandardProtocolFamily
 import java.net.UnixDomainSocketAddress
 import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import java.nio.channels.FileLock
 import java.nio.channels.ServerSocketChannel
 import java.nio.channels.SocketChannel
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
@@ -20,6 +23,14 @@ fun xrayVersion(): String = runCatching {
 /** Only one copy runs: a second launch (e.g. a menu action) hands its command to the first one over a socket. */
 object Instance {
     private val sock get() = File(Env.data, "gui.sock")
+    private var lock: FileLock? = null
+
+    fun lockWindows(): Boolean {
+        val channel = FileChannel.open(File(Env.data, "gui.lock").toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE)
+        lock = channel.tryLock()
+        if (lock == null) channel.close()
+        return lock != null
+    }
 
     fun forward(cmd: String): Boolean = runCatching {
         SocketChannel.open(StandardProtocolFamily.UNIX).use { ch ->

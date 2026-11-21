@@ -6,6 +6,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.util.concurrent.Executors
 
 data class SubInfo(
@@ -117,7 +119,7 @@ object Store {
                 fos.write(encode(s).toString().toByteArray())
                 fos.fd.sync()
             }
-            tmp.renameTo(file)
+            Files.move(tmp.toPath(), file.toPath(), ATOMIC_MOVE)
         }
     }
 

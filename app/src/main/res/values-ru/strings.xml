@@ -57,7 +57,7 @@
     <string name="sub_deleted">«%1$s» удалена</string>
     <string name="manual_group">Добавленные вручную</string>
     <string name="empty_title">Серверов пока нет</string>
-    <string name="empty_hint">Нажмите +, чтобы добавить подписку из буфера, по QR-коду или вручную</string>
+    <string name="empty_hint">Добавьте подписку из буфера, по QR-коду или вручную</string>
 
     <string name="sub_support">Поддержка</string>
     <string name="sub_web">Страница подписки</string>

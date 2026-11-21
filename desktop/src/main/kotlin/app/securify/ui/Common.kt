@@ -1,56 +1,51 @@
 package app.securify.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LargeFlexibleTopAppBar
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonGroupDefaults
-import androidx.compose.material3.ToggleButton
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialShapes
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import androidx.compose.runtime.compositionLocalOf
-import com.google.zxing.BinaryBitmap
-import com.google.zxing.DecodeHintType
-import com.google.zxing.MultiFormatReader
-import com.google.zxing.client.j2se.BufferedImageLuminanceSource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import app.securify.core.PING_PENDING
+import app.securify.core.Sub
+import app.securify.core.protocolLabel
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
 import com.google.zxing.client.j2se.MatrixToImageWriter
-import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeWriter
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.awt.Desktop
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
@@ -58,64 +53,104 @@ import java.awt.datatransfer.StringSelection
 import java.awt.image.BufferedImage
 import java.net.URI
 import java.util.Locale
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.EncodeHintType
-import app.securify.core.PING_PENDING
-import app.securify.core.Sub
-import app.securify.core.protocolLabel
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ProtocolBadge(protocol: String, selected: Boolean = false) {
-    val c = MaterialTheme.colorScheme
+    val c = MiuixTheme.colorScheme
     Box(
-        Modifier.size(44.dp)
-            .clip((if (selected) MaterialShapes.Cookie9Sided else MaterialShapes.Cookie4Sided).toShape())
+        Modifier.size(40.dp)
+            .clip(RoundedCornerShape(12.dp))
             .background(if (selected) c.primary else c.tertiaryContainer),
         contentAlignment = Alignment.Center,
     ) {
-        val color = if (selected) c.onPrimary else c.onTertiaryContainer
-        if (protocol == "auto") Icon(Icons.Filled.Bolt, null, tint = color)
-        else Text(protocolLabel(protocol).take(2).uppercase(), style = MaterialTheme.typography.labelLarge, color = color)
+        Text(
+            if (protocol == "auto") "A" else protocolLabel(protocol).take(2).uppercase(),
+            style = MiuixTheme.textStyles.footnote1,
+            fontWeight = FontWeight.SemiBold,
+            color = if (selected) c.onPrimary else c.onTertiaryContainer,
+        )
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PingLabel(ms: Long?) {
     if (ms == null) return
-    if (ms == PING_PENDING) return LoadingIndicator(Modifier.size(28.dp))
-    val c = MaterialTheme.colorScheme
+    if (ms == PING_PENDING) {
+        CircularProgressIndicator(Modifier.size(14.dp), progress = null, strokeWidth = 1.5.dp)
+        return
+    }
+    val c = MiuixTheme.colorScheme
     Text(
         if (ms < 0) stringResource(R.string.ping_fail) else stringResource(R.string.ping_ms, ms),
-        style = MaterialTheme.typography.labelLarge,
-        color = when { ms < 0 -> c.error; ms < 300 -> c.primary; ms < 800 -> c.tertiary; else -> c.error },
+        style = MiuixTheme.textStyles.footnote1,
+        color = when { ms < 0 -> c.error; ms < 300 -> c.primary; ms < 800 -> c.onSurfaceVariantSummary; else -> c.error },
     )
 }
 
 @Composable
 fun subTitle(sub: Sub) = sub.title.ifEmpty { stringResource(R.string.manual_group) }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ScreenTopBar(
     title: String,
-    scroll: TopAppBarScrollBehavior,
     subtitle: String? = null,
-    titleContent: @Composable (() -> Unit)? = null,
+    navigationIcon: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    val titleSlot: @Composable () -> Unit = { if (titleContent == null) Text(title) else titleContent() }
-    when {
-        !isLandscape() -> LargeFlexibleTopAppBar(
-            title = titleSlot, subtitle = subtitle?.let { { Text(it) } }, actions = actions, scrollBehavior = scroll,
-        )
-        subtitle != null -> TopAppBar(title = titleSlot, subtitle = { Text(subtitle) }, actions = actions, scrollBehavior = scroll)
-        else -> TopAppBar(title = titleSlot, actions = actions, scrollBehavior = scroll)
-    }
+    SmallTopAppBar(
+        title = title,
+        subtitle = subtitle.orEmpty(),
+        navigationIcon = { navigationIcon?.invoke() },
+        actions = actions,
+        defaultWindowInsetsPadding = false,
+    )
 }
 
 fun Modifier.centeredContent() = fillMaxSize().wrapContentWidth().widthIn(max = 720.dp)
+
+@Composable
+fun SectionTitle(text: String) {
+    Text(
+        text,
+        style = MiuixTheme.textStyles.body2,
+        color = MiuixTheme.colorScheme.onBackgroundVariant,
+        modifier = Modifier.padding(start = 4.dp, top = 20.dp, bottom = 6.dp),
+    )
+}
+
+/** A white rounded list that holds Miuix preference rows, divided the way HyperOS lists are. */
+@Composable
+fun PrefGroup(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        cornerRadius = 18.dp,
+        insideMargin = PaddingValues(0.dp),
+    ) {
+        content()
+    }
+}
+
+@Composable
+fun RowDivider(inset: Boolean = true) {
+    top.yukonga.miuix.kmp.basic.HorizontalDivider(
+        modifier = if (inset) Modifier.padding(start = 16.dp) else Modifier,
+    )
+}
+
+@Composable
+fun DialogButtons(
+    confirm: String,
+    onConfirm: () -> Unit,
+    enabled: Boolean = true,
+    dismiss: String = stringResource(R.string.cancel),
+    onDismiss: () -> Unit,
+) {
+    Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
+        TextButton(dismiss, onDismiss)
+        Spacer(Modifier.width(8.dp))
+        TextButton(confirm, onConfirm, enabled = enabled, colors = ButtonDefaults.textButtonColorsPrimary())
+    }
+}
 
 fun copyText(label: String, text: String, sensitive: Boolean = false) {
     runCatching { Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null) }
@@ -133,7 +168,10 @@ fun clipboardImage(): BufferedImage? = runCatching {
 }.getOrNull()
 
 fun decodeQr(img: BufferedImage): String? = runCatching {
-    MultiFormatReader().decode(BinaryBitmap(HybridBinarizer(BufferedImageLuminanceSource(img))), mapOf(DecodeHintType.TRY_HARDER to true)).text
+    com.google.zxing.MultiFormatReader().decode(
+        com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(com.google.zxing.client.j2se.BufferedImageLuminanceSource(img))),
+        mapOf(com.google.zxing.DecodeHintType.TRY_HARDER to true),
+    ).text
 }.getOrNull()
 
 /** Desktop.browse isn't available on every Linux desktop, xdg-open is. */
@@ -163,53 +201,53 @@ fun relativeTime(ms: Long): String {
     }
 }
 
-val LocalLandscape = compositionLocalOf { true }
-
-@Composable
-fun isLandscape() = LocalLandscape.current
-
 fun segmentShape(first: Boolean, last: Boolean) = RoundedCornerShape(
-    topStart = if (first) 20.dp else 4.dp, topEnd = if (first) 20.dp else 4.dp,
-    bottomStart = if (last) 20.dp else 4.dp, bottomEnd = if (last) 20.dp else 4.dp,
+    topStart = if (first) 16.dp else 0.dp, topEnd = if (first) 16.dp else 0.dp,
+    bottomStart = if (last) 16.dp else 0.dp, bottomEnd = if (last) 16.dp else 0.dp,
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun Choice(options: List<String>, selected: Int, modifier: Modifier = Modifier, onSelect: (Int) -> Unit) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
-        options.forEachIndexed { i, label ->
-            ToggleButton(
-                checked = i == selected,
-                onCheckedChange = { onSelect(i) },
-                modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-                shapes = when (i) {
-                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                    options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                },
-            ) { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        }
-    }
+fun AppDialog(
+    title: String? = null,
+    summary: String? = null,
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    // the window is a desktop one, so dialogs sit centered instead of sliding up like on a phone
+    OverlayDialog(
+        show = true,
+        title = title,
+        summary = summary,
+        titleColor = MiuixTheme.colorScheme.onSurface,
+        largeScreen = true,
+        onDismissRequest = onDismiss,
+        content = content,
+    )
 }
 
 @Composable
 fun QrDialog(title: String, text: String, onDismiss: () -> Unit) {
     val qr = remember(text) {
         runCatching {
-            MatrixToImageWriter.toBufferedImage(QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, 900, 900,
-                mapOf(EncodeHintType.CHARACTER_SET to "UTF-8", EncodeHintType.MARGIN to 1))).toComposeImageBitmap()
+            MatrixToImageWriter.toBufferedImage(
+                QRCodeWriter().encode(
+                    text, BarcodeFormat.QR_CODE, 900, 900,
+                    mapOf(EncodeHintType.CHARACTER_SET to "UTF-8", EncodeHintType.MARGIN to 1),
+                ),
+            ).toComposeImageBitmap()
         }.getOrNull()
     }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-        text = {
-            if (qr == null) Text(stringResource(R.string.qr_too_long))
-            else Image(
+    AppDialog(title = title, onDismiss = onDismiss) {
+        if (qr == null) {
+            Text(stringResource(R.string.qr_too_long), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+        } else {
+            Image(
                 qr, null,
-                Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(20.dp)).background(Color.White).padding(12.dp),
+                Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color.White).padding(12.dp),
             )
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } },
-    )
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
+            TextButton(stringResource(R.string.close), onDismiss)
+        }
+    }
 }

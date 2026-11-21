@@ -3,6 +3,7 @@
     <string name="error_auth">Couldn\'t get administrator rights: %s</string>
     <string name="error_auth_cancelled">The password prompt was cancelled</string>
     <string name="error_no_pkexec">pkexec isn\'t available. Install polkit and run a polkit agent to create the TUN interface.</string>
+    <string name="error_xray_stop_timeout">Xray did not stop in time</string>
     <string name="error_xray_exited">Xray stopped: %s</string>
     <string name="error_start_timeout">Xray didn\'t start in time</string>
     <string name="tray_open">Open Securify</string>
@@ -20,5 +21,6 @@
     <string name="update_restart">Restarting into the new version…</string>
     <string name="copy_log">Copy the log</string>
     <string name="password_title">Administrator password</string>
+    <string name="password_field">Password</string>
     <string name="password_wrong">Wrong password, try again</string>
 </resources>

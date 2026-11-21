@@ -98,13 +98,23 @@ private fun ownConfig(server: Server, p: Prefs, pings: Map<String, Long>): JSONO
 }
 
 /** JSON subscriptions are used as is: only the inbounds, stats and the ipcheck rule are replaced or added. */
-fun buildConfig(server: Server, prefs: Prefs = Prefs(), ipCheckSocket: String? = null, pings: Map<String, Long> = emptyMap()): String {
+fun buildConfig(
+    server: Server,
+    prefs: Prefs = Prefs(),
+    ipCheckSocket: String? = null,
+    pings: Map<String, Long> = emptyMap(),
+    ipCheckPort: Int? = null,
+): String {
     val own = server.config == null
     val c = server.config?.let { JSONObject(it.toString()) } ?: ownConfig(server, prefs, pings)
     c.put("log", JSONObject().put("loglevel", "warning"))
     c.put("inbounds", arr(tunInbound(own && prefs.fakeDns)))
-    if (ipCheckSocket != null) {
-        c.getJSONArray("inbounds").put(JSONObject().put("tag", "ipcheck").put("listen", ipCheckSocket).put("protocol", "http"))
+    if (ipCheckSocket != null || ipCheckPort != null) {
+        // a unix socket on Linux, loopback TCP on Windows where the socket path is not worth it
+        val listen = if (ipCheckPort != null) "127.0.0.1" else ipCheckSocket!!
+        val ib = JSONObject().put("tag", "ipcheck").put("listen", listen).put("protocol", "http")
+        if (ipCheckPort != null) ib.put("port", ipCheckPort)
+        c.getJSONArray("inbounds").put(ib)
         if (server.group.isNotEmpty() || server.outbound.optString("tag").isNotEmpty()) {
             val routing = c.optJSONObject("routing") ?: JSONObject().also { c.put("routing", it) }
             val rules = routing.optJSONArray("rules") ?: JSONArray()

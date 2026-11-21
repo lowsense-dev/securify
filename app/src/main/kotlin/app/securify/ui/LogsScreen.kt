@@ -2,25 +2,14 @@ package app.securify.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,8 +26,17 @@ import androidx.compose.ui.unit.dp
 import app.securify.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.ChevronBackward
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Share
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LogsScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
@@ -51,14 +49,17 @@ fun LogsScreen(onBack: () -> Unit) {
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.logs)) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
+            ScreenTopBar(
+                title = stringResource(R.string.logs),
+                navigationIcon = { IconButton(onClick = onBack) { Icon(MiuixIcons.ChevronBackward, null, Modifier.size(22.dp)) } },
                 actions = {
-                    IconButton(onClick = { reload++ }) { Icon(Icons.Filled.Refresh, stringResource(R.string.refresh)) }
+                    IconButton(onClick = { reload++ }) {
+                        Icon(MiuixIcons.Refresh, stringResource(R.string.refresh), Modifier.size(20.dp))
+                    }
                     IconButton(enabled = !lines.isNullOrEmpty(), onClick = { shareText(ctx, lines.orEmpty().joinToString("\n")) }) {
-                        Icon(Icons.Filled.Share, stringResource(R.string.share))
+                        Icon(MiuixIcons.Share, stringResource(R.string.share), Modifier.size(20.dp))
                     }
                 },
             )
@@ -67,11 +68,17 @@ fun LogsScreen(onBack: () -> Unit) {
         val l = lines
         Box(Modifier.padding(pad).fillMaxSize(), contentAlignment = Alignment.Center) {
             when {
-                l == null -> LoadingIndicator()
-                l.isEmpty() -> Text(stringResource(R.string.logs_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                l == null -> CircularProgressIndicator(Modifier.size(28.dp), progress = null, strokeWidth = 2.dp)
+                l.isEmpty() -> Text(stringResource(R.string.logs_empty), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                 else -> SelectionContainer {
                     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp)) {
-                        items(l) { Text(it, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace) }
+                        items(l) {
+                            Text(
+                                it,
+                                style = MiuixTheme.textStyles.footnote1.copy(fontFamily = FontFamily.Monospace),
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            )
+                        }
                     }
                 }
             }

@@ -3,38 +3,23 @@ package app.securify.ui
 import android.Manifest
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,6 +29,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -56,10 +42,25 @@ import app.securify.core.AppMode
 import app.securify.core.Store
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.TabRow
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.ChevronBackward
+import top.yukonga.miuix.kmp.icon.extended.Clear
+import top.yukonga.miuix.kmp.icon.extended.Search
+import top.yukonga.miuix.kmp.preference.CheckboxLocation
+import top.yukonga.miuix.kmp.preference.CheckboxPreference
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private class AppEntry(val pkg: String, val label: String, val system: Boolean)
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppsScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
@@ -85,65 +86,70 @@ fun AppsScreen(onBack: () -> Unit) {
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.apps)) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
+            ScreenTopBar(
+                title = stringResource(R.string.apps),
+                navigationIcon = { IconButton(onClick = onBack) { Icon(MiuixIcons.ChevronBackward, null, Modifier.size(22.dp)) } },
             )
         },
     ) { pad ->
         Column(Modifier.padding(pad).centeredContent().padding(horizontal = 16.dp)) {
-            Choice(
-                listOf(stringResource(R.string.apps_mode_off), stringResource(R.string.apps_mode_only), stringResource(R.string.apps_mode_bypass)),
-                p.appMode.ordinal,
-            ) { i -> Store.prefs { it.copy(appMode = AppMode.entries[i]) } }
-            OutlinedTextField(
-                query, { query = it }, Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                singleLine = true, shape = CircleShape,
-                leadingIcon = { Icon(Icons.Filled.Search, null) },
-                placeholder = { Text(stringResource(R.string.search)) },
-                enabled = p.appMode != AppMode.OFF,
+            TabRow(
+                tabs = listOf(stringResource(R.string.apps_mode_off), stringResource(R.string.apps_mode_only), stringResource(R.string.apps_mode_bypass)),
+                selectedTabIndex = p.appMode.ordinal,
+                onTabSelected = { i -> Store.prefs { it.copy(appMode = AppMode.entries[i]) } },
             )
-            Row(Modifier.padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(
-                    Triple(R.string.apps_user, showUser) { showUser = !showUser },
-                    Triple(R.string.apps_system, showSystem) { showSystem = !showSystem },
-                ).forEach { (label, on, flip) ->
-                    FilterChip(
-                        on, flip, label = { Text(stringResource(label)) },
-                        leadingIcon = { if (on) Icon(Icons.Filled.Check, null, Modifier.size(FilterChipDefaults.IconSize)) },
-                        enabled = p.appMode != AppMode.OFF,
-                    )
-                }
+            TextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                label = stringResource(R.string.search),
+                useLabelAsPlaceholder = true,
+                singleLine = true,
+                enabled = p.appMode != AppMode.OFF,
+                leadingIcon = { Icon(MiuixIcons.Search, null, Modifier.size(18.dp), tint = MiuixTheme.colorScheme.onSurfaceVariantSummary) },
+                trailingIcon = if (query.isNotEmpty()) {
+                    {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(MiuixIcons.Clear, null, Modifier.size(18.dp), tint = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                        }
+                    }
+                } else null,
+            )
+            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterPill(stringResource(R.string.apps_user), showUser, p.appMode != AppMode.OFF) { showUser = !showUser }
+                FilterPill(stringResource(R.string.apps_system), showSystem, p.appMode != AppMode.OFF) { showSystem = !showSystem }
             }
             val list = apps
-            if (list == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator() }
-            else {
+            if (list == null) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(Modifier.size(28.dp), progress = null, strokeWidth = 2.dp)
+                }
+            } else {
                 val q = query.trim()
                 // picked apps stay visible, so a filter never hides what is already in the list
                 val shown = list.filter { a -> a.pkg in p.apps || (if (a.system) showSystem else showUser) }
                     .filter { q.isEmpty() || it.label.contains(q, true) || it.pkg.contains(q, true) }
-                LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+                LazyColumn(contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)) {
                     itemsIndexed(shown, key = { _, a -> a.pkg }) { i, a ->
                         val on = a.pkg in p.apps
                         val toggle = { Store.prefs { it.copy(apps = if (on) it.apps - a.pkg else it.apps + a.pkg) } }
-                        Surface(
-                            onClick = toggle, enabled = p.appMode != AppMode.OFF,
-                            shape = segmentShape(i == 0, i == shown.lastIndex),
-                            color = if (on && p.appMode != AppMode.OFF) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainer,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                        Column(
+                            Modifier.fillMaxWidth()
+                                .clip(segmentShape(i == 0, i == shown.lastIndex))
+                                .background(MiuixTheme.colorScheme.surfaceContainer),
                         ) {
-                            Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                AppIcon(a.pkg)
-                                Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
-                                    Text(a.label, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(
-                                        a.pkg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                                Checkbox(on, { toggle() }, enabled = p.appMode != AppMode.OFF)
-                            }
+                            CheckboxPreference(
+                                title = a.label,
+                                summary = a.pkg,
+                                checked = on,
+                                onCheckedChange = { toggle() },
+                                enabled = p.appMode != AppMode.OFF,
+                                checkboxLocation = CheckboxLocation.End,
+                                startAction = { AppIcon(a.pkg) },
+                            )
+                            if (i != shown.lastIndex) RowDivider()
                         }
                     }
                 }
@@ -153,10 +159,42 @@ fun AppsScreen(onBack: () -> Unit) {
 }
 
 @Composable
+private fun FilterPill(label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val c = MiuixTheme.colorScheme
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        colors = if (selected) ButtonDefaults.buttonColors(color = c.primary, contentColor = c.onPrimary)
+        else ButtonDefaults.buttonColors(color = c.secondaryContainer, contentColor = c.onSurface),
+        cornerRadius = 50.dp,
+        minWidth = 0.dp,
+        minHeight = 32.dp,
+        insideMargin = PaddingValues(horizontal = 14.dp, vertical = 5.dp),
+    ) {
+        Text(label, style = MiuixTheme.textStyles.footnote1)
+    }
+}
+
+@Composable
 private fun AppIcon(pkg: String) {
     val pm = LocalContext.current.packageManager
     val icon by produceState<ImageBitmap?>(null, pkg) {
         value = withContext(Dispatchers.IO) { runCatching { pm.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap() }.getOrNull() }
     }
-    icon?.let { Image(it, null, Modifier.size(40.dp)) } ?: Spacer(Modifier.size(40.dp))
+    val bitmap = icon
+    if (bitmap != null) {
+        Image(bitmap, null, Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)))
+    } else {
+        Box(
+            Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(MiuixTheme.colorScheme.tertiaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                pkg.substringAfterLast('.').take(1).uppercase(),
+                style = MiuixTheme.textStyles.body1,
+                color = MiuixTheme.colorScheme.onTertiaryContainer,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }

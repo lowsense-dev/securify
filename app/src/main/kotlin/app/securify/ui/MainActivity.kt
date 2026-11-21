@@ -2,18 +2,6 @@ package app.securify.ui
 
 import android.Manifest
 import android.content.Context
-import android.content.res.Configuration
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.ui.platform.LocalConfiguration
 import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Build
@@ -25,66 +13,65 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Dns
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.ShortNavigationBar
-import androidx.compose.material3.ShortNavigationBarItem
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import app.securify.R
 import app.securify.vpn.SecurifyVpn
-import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.NavigationBar
+import top.yukonga.miuix.kmp.basic.NavigationBarItem
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Home
+import top.yukonga.miuix.kmp.icon.extended.Layers
+import top.yukonga.miuix.kmp.icon.extended.Settings
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContent { SecurifyTheme { SecurifyApp() } }
+        setContent {
+            SecurifyTheme {
+                Box(Modifier.fillMaxSize().background(MiuixTheme.colorScheme.surface)
+                    .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))) {
+                    SecurifyApp()
+                }
+            }
+        }
     }
 }
 
-@Composable
-fun isLandscape() = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-
 fun Context.bytes(b: Long): String = Formatter.formatShortFileSize(this, b)
 
-private data class Tab(val label: Int, val on: androidx.compose.ui.graphics.vector.ImageVector, val off: androidx.compose.ui.graphics.vector.ImageVector)
+private data class Tab(val label: Int, val icon: ImageVector)
 
 private val tabs = listOf(
-    Tab(R.string.tab_home, Icons.Filled.Shield, Icons.Outlined.Shield),
-    Tab(R.string.tab_servers, Icons.Filled.Dns, Icons.Outlined.Dns),
-    Tab(R.string.tab_settings, Icons.Filled.Settings, Icons.Outlined.Settings),
+    Tab(R.string.tab_home, MiuixIcons.Home),
+    Tab(R.string.tab_servers, MiuixIcons.Layers),
+    Tab(R.string.tab_settings, MiuixIcons.Settings),
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SecurifyApp() {
     val ctx = LocalContext.current
-    val pager = rememberPagerState { tabs.size }
-    val scope = rememberCoroutineScope()
-    val go = { i: Int -> scope.launch { pager.animateScrollToPage(i) }; Unit }
+    var current by rememberSaveable { mutableStateOf(0) }
     var overlay by rememberSaveable { mutableStateOf<String?>(null) }
 
     val vpnPermission = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -104,55 +91,36 @@ fun SecurifyApp() {
 
     overlay?.let { o ->
         val close = { overlay = null; if (o != "logs") SecurifyVpn.restartIfOn(ctx) }
+        BackHandler(enabled = o != "rules", onBack = close)
         when (o) {
             "rules" -> RulesScreen(onBack = close)
-            "logs" -> { BackHandler(onBack = close); LogsScreen(onBack = close) }
-            else -> { BackHandler(onBack = close); AppsScreen(onBack = close) }
+            "logs" -> LogsScreen(onBack = close)
+            else -> AppsScreen(onBack = close)
         }
         return
     }
 
-    val pages = @Composable { m: Modifier ->
-        HorizontalPager(pager, m, userScrollEnabled = false) { i ->
-            when (i) {
-                0 -> HomeScreen(Modifier, onToggle = toggle, onServers = { go(1) })
+    Scaffold(
+        contentWindowInsets = WindowInsets(0),
+        bottomBar = {
+            NavigationBar(color = MiuixTheme.colorScheme.surface, defaultWindowInsetsPadding = false) {
+                tabs.forEachIndexed { i, tab ->
+                    NavigationBarItem(
+                        selected = current == i,
+                        onClick = { current = i },
+                        icon = tab.icon,
+                        label = stringResource(tab.label),
+                    )
+                }
+            }
+        },
+    ) { pad ->
+        Box(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad)) {
+            when (current) {
+                0 -> HomeScreen(Modifier, onToggle = toggle, onServers = { current = 1 })
                 1 -> ServersScreen(Modifier)
                 else -> SettingsScreen(Modifier, onApps = { overlay = "apps" }, onRules = { overlay = "rules" }, onLogs = { overlay = "logs" })
             }
         }
-    }
-
-    if (isLandscape()) {
-        Surface(color = MaterialTheme.colorScheme.surface) { Row(Modifier.fillMaxSize()) {
-            NavigationRail(Modifier.fillMaxHeight(), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                Spacer(Modifier.weight(1f))
-                tabs.forEachIndexed { i, t ->
-                    NavigationRailItem(
-                        selected = pager.targetPage == i,
-                        onClick = { go(i) },
-                        icon = { Icon(if (pager.targetPage == i) t.on else t.off, null) },
-                        label = { Text(stringResource(t.label)) },
-                    )
-                }
-                Spacer(Modifier.weight(1f))
-            }
-            pages(Modifier.weight(1f).consumeWindowInsets(WindowInsets.safeDrawing.only(WindowInsetsSides.Start)))
-        } }
-    } else {
-        Scaffold(
-            contentWindowInsets = WindowInsets(0),
-            bottomBar = {
-                ShortNavigationBar {
-                    tabs.forEachIndexed { i, t ->
-                        ShortNavigationBarItem(
-                            selected = pager.targetPage == i,
-                            onClick = { go(i) },
-                            icon = { Icon(if (pager.targetPage == i) t.on else t.off, null) },
-                            label = { Text(stringResource(t.label)) },
-                        )
-                    }
-                }
-            },
-        ) { pad -> pages(Modifier.padding(pad).consumeWindowInsets(pad)) }
     }
 }

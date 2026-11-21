@@ -38,12 +38,14 @@ suspend fun ping(server: Server, method: PingMethod, url: String): Long = runInt
             }
             PingMethod.ICMP -> {
                 require(isPlainHost(server.host))
-                val p = ProcessBuilder(listOf("ping", "-c", "1", "-W", "3") + PingHooks.icmpArgs() + server.host)
-                    .redirectErrorStream(true).start()
+                val win = System.getProperty("os.name").startsWith("Windows", ignoreCase = true)
+                val cmd = if (win) listOf("ping", "-n", "1", "-w", "3000", server.host)
+                else listOf("ping", "-c", "1", "-W", "3") + PingHooks.icmpArgs() + server.host
+                val p = ProcessBuilder(cmd).redirectErrorStream(true).start()
                 try {
                     val out = p.inputStream.bufferedReader().readText()
                     p.waitFor(5, TimeUnit.SECONDS)
-                    Regex("time=([\\d.]+)").find(out)?.groupValues?.getOrNull(1)?.toDoubleOrNull()?.toLong()?.coerceAtLeast(1) ?: -1L
+                    parseIcmpTime(out, win)
                 } finally { p.destroy() }
             }
             PingMethod.REAL -> PingHooks.real(server, url)
@@ -52,6 +54,11 @@ suspend fun ping(server: Server, method: PingMethod, url: String): Long = runInt
 }
 
 fun isPlainHost(h: String) = h.isNotEmpty() && h[0] != '-' && h.all { it.isLetterOrDigit() || it in ".-:_" }
+
+internal fun parseIcmpTime(output: String, windows: Boolean): Long {
+    val pattern = if (windows) Regex("[=<]\\s*(\\d+)\\s*(ms|мс)", RegexOption.IGNORE_CASE) else Regex("time=([\\d.]+)")
+    return pattern.find(output)?.groupValues?.get(1)?.toDoubleOrNull()?.toLong()?.coerceAtLeast(1) ?: -1L
+}
 
 const val PING_PENDING = -2L
 

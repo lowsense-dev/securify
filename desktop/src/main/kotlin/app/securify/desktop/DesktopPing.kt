@@ -42,7 +42,7 @@ object DesktopPing {
         }
         val dir = File(Env.data, "ping").apply { mkdirs() }
         val f = File.createTempFile("ping", ".json", dir)
-        Files.setPosixFilePermissions(f.toPath(), PosixFilePermissions.fromString("rw-------"))
+        if (!Os.windows) Files.setPosixFilePermissions(f.toPath(), PosixFilePermissions.fromString("rw-------"))
         f.writeText(c.toString())
         val pb = ProcessBuilder(Env.xray.path, "run", "-c", f.path).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD)
         pb.environment()["XRAY_LOCATION_ASSET"] = Env.data.path
