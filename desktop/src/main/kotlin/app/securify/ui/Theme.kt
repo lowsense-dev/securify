@@ -4,7 +4,10 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import app.securify.core.BRAND_ACCENT_ARGB
+import app.securify.core.tuneAccentArgb
+import app.securify.core.useDarkOnAccent
 import app.securify.desktop.Os
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.darkColorScheme
@@ -34,16 +37,13 @@ object SystemLook {
     }.getOrNull()
 }
 
-/** Securify's own seed color, used when the desktop doesn't report an accent. */
-private val Brand = Color(0xFF0E7A6A)
-
-private fun on(color: Color) = if (color.luminance() > 0.55f) Color(0xFF111111) else Color.White
+private fun on(color: Color) = if (useDarkOnAccent(color.toArgb())) Color(0xFF111111) else Color.White
 
 @Composable
 fun SecurifyTheme(darkOverride: Boolean? = null, content: @Composable () -> Unit) {
     val dark = darkOverride ?: SystemLook.dark ?: isSystemInDarkTheme()
-    val accent = SystemLook.accent ?: Brand
-    val primary = if (dark) lerp(accent, Color.White, 0.3f) else accent
+    val seedArgb = SystemLook.accent?.toArgb() ?: BRAND_ACCENT_ARGB
+    val primary = Color(tuneAccentArgb(seedArgb, dark))
     // every primary role is derived, otherwise Miuix's blue defaults show through disabled buttons
     val colors = if (dark) {
         val base = Color(0xFF242424)

@@ -13,6 +13,7 @@ import android.net.Network
 import android.net.LocalSocketAddress
 import android.net.VpnService
 import android.os.Build
+import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import app.securify.BuildConfig
@@ -57,7 +58,9 @@ class SecurifyVpn : VpnService() {
         private const val ACTION_START = "start"
         private const val ACTION_STOP = "stop"
         private const val NOTIF_ID = 1
-        private const val CHANNEL = "vpn"
+        private const val CHANNEL = "vpn_live"
+        private const val LEGACY_CHANNEL = "vpn"
+        private const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"
 
         val isActive get() = state.value.let { it is VpnState.On || it is VpnState.Connecting }
 
@@ -137,8 +140,9 @@ class SecurifyVpn : VpnService() {
             core = c
             tun = fd
             filesDir.listFiles { f -> f.name.startsWith("ipcheck") && !f.name.startsWith(sock.name) }?.forEach { it.delete() }
-            state.value = VpnState.On(server.name, System.currentTimeMillis())
-            foreground(getString(R.string.notif_connected, server.name))
+            val since = System.currentTimeMillis()
+            state.value = VpnState.On(server.name, since)
+            foreground(getString(R.string.notif_connected, server.name), since)
             coroutineScope {
                 launch { exit.value = lookupExit(sock) ?: getString(R.string.exit_unknown) }
                 launch { watchLink(c, st.prefs.pingUrl) }
@@ -285,20 +289,41 @@ class SecurifyVpn : VpnService() {
         this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
     )
 
-    private fun foreground(text: String) {
+    private fun foreground(text: String, since: Long = 0L) {
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.notif_channel), NotificationManager.IMPORTANCE_LOW))
+        nm.deleteNotificationChannel(LEGACY_CHANNEL)
+        // DEFAULT importance with sound/vibration disabled lets Android 16 Live Updates and
+        // OxygenOS/ColorOS Live Alerts surface the pill without buzzing on connect.
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL, getString(R.string.notif_channel), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                setSound(null, null)
+                enableVibration(false)
+                setShowBadge(false)
+            },
+        )
         val stop = PendingIntent.getService(
             this, 1, Intent(this, SecurifyVpn::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE,
         )
-        val n = Notification.Builder(this, CHANNEL)
+        val nb = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_shield)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(text)
+            .setCategory(Notification.CATEGORY_SERVICE)
             .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setContentIntent(openApp())
             .addAction(Notification.Action.Builder(null, getString(R.string.action_disconnect), stop).build())
-            .build()
+        if (since > 0L) {
+            nb.setWhen(since).setShowWhen(true).setUsesChronometer(true)
+        } else {
+            nb.setShowWhen(false)
+            if (Build.VERSION.SDK_INT >= 36) nb.setShortCriticalText(getString(R.string.notif_short_connecting))
+        }
+        if (Build.VERSION.SDK_INT >= 36) {
+            nb.addExtras(Bundle().apply { putBoolean(EXTRA_REQUEST_PROMOTED_ONGOING, true) })
+        }
+        val n = nb.build()
         if (Build.VERSION.SDK_INT >= 34) startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         else startForeground(NOTIF_ID, n)
     }

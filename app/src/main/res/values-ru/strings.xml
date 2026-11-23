@@ -17,6 +17,10 @@
     <string name="status_no_link">нет связи через сервер</string>
     <string name="notif_channel">Статус VPN</string>
     <string name="notif_connected">Подключено: %1$s</string>
+    <string name="notif_short_connecting">VPN…</string>
+    <string name="live_updates">Живые уведомления</string>
+    <string name="live_updates_on">Показываются в строке состояния и Live Alerts</string>
+    <string name="live_updates_off">Включите «Живые обновления» / Live Alerts в настройках системы, чтобы видеть таймер в строке состояния</string>
     <string name="speed">%1$s/с</string>
     <string name="traffic_used">Исп.:</string>
     <string name="add_first_sub">Добавить подписку</string>

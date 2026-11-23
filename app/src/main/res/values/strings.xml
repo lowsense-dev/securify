@@ -18,6 +18,10 @@
     <string name="status_no_link">no connection through the server</string>
     <string name="notif_channel">VPN status</string>
     <string name="notif_connected">Connected to %1$s</string>
+    <string name="notif_short_connecting">VPN…</string>
+    <string name="live_updates">Live updates</string>
+    <string name="live_updates_on">Shown in the status bar and Live Alerts</string>
+    <string name="live_updates_off">Allow Live updates in system settings to show the timer in the status bar and Live Alerts</string>
     <string name="speed">%1$s/s</string>
     <string name="traffic_used">Used:</string>
     <string name="add_first_sub">Add a subscription</string>

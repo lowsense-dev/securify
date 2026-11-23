@@ -1,7 +1,9 @@
 package app.securify.ui
 
+import android.app.NotificationManager
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.text.format.DateUtils
 import android.widget.Toast
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,6 +23,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.securify.BuildConfig
@@ -162,6 +168,10 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit, onRules: () -> Unit, 
                         summary = stringResource(R.string.always_on_hint),
                         onClick = { runCatching { ctx.startActivity(Intent(Settings.ACTION_VPN_SETTINGS)) } },
                     )
+                    if (Build.VERSION.SDK_INT >= 36) {
+                        RowDivider()
+                        LiveUpdatesRow()
+                    }
                 }
             }
 
@@ -325,4 +335,29 @@ private fun DnsDialog(current: String, onDismiss: () -> Unit, onSave: (String) -
 private fun toggleAuto(ctx: android.content.Context, on: Boolean) {
     Store.prefs { it.copy(autoUpdate = on) }
     SubUpdateJob.schedule(ctx, on)
+}
+
+@Composable
+private fun LiveUpdatesRow() {
+    if (Build.VERSION.SDK_INT < 36) return
+    val ctx = LocalContext.current
+    val nm = remember(ctx) { ctx.getSystemService(NotificationManager::class.java) }
+    var allowed by remember { mutableStateOf(nm.canPostPromotedNotifications()) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, nm) {
+        val obs = LifecycleEventObserver { _, e ->
+            if (e == Lifecycle.Event.ON_RESUME) allowed = nm.canPostPromotedNotifications()
+        }
+        lifecycle.addObserver(obs)
+        onDispose { lifecycle.removeObserver(obs) }
+    }
+    ArrowPreference(
+        title = stringResource(R.string.live_updates),
+        summary = stringResource(if (allowed) R.string.live_updates_on else R.string.live_updates_off),
+        onClick = {
+            val promo = Intent(Settings.ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+            val appNotif = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+            runCatching { ctx.startActivity(promo) }.onFailure { runCatching { ctx.startActivity(appNotif) } }
+        },
+    )
 }
