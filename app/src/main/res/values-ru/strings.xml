@@ -18,6 +18,13 @@
     <string name="notif_channel">Статус VPN</string>
     <string name="notif_connected">Подключено: %1$s</string>
     <string name="notif_short_connecting">VPN…</string>
+    <string name="notif_short_on">VPN</string>
+    <string name="sec_notification">Уведомление</string>
+    <string name="notif_server">Название сервера</string>
+    <string name="notif_sub">Название подписки</string>
+    <string name="notif_speed">Скорость</string>
+    <string name="notif_traffic">Потраченный трафик</string>
+    <string name="notif_time">Время подключения</string>
     <string name="live_updates">Живые уведомления</string>
     <string name="live_updates_on">Показываются в строке состояния и Live Alerts</string>
     <string name="live_updates_off">Включите «Живые обновления» / Live Alerts в настройках системы, чтобы видеть таймер в строке состояния</string>

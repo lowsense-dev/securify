@@ -49,4 +49,12 @@ class SubTest {
         assertNull(plain.hwid)
         assertNull(plain.agent)
     }
+
+    @Test
+    fun notificationPrefsSurviveRoundtripAndDefaultWhenMissing() {
+        val prefs = Prefs(notifServer = false, notifSub = true, notifSpeed = false, notifTraffic = true, notifTime = false)
+        val back = decode(encode(AppState(prefs = prefs))).prefs
+        assertEquals(prefs, back)
+        assertEquals(Prefs(), decode(JSONObject()).prefs)
+    }
 }

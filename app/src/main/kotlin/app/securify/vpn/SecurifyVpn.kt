@@ -20,12 +20,14 @@ import app.securify.BuildConfig
 import app.securify.R
 import app.securify.core.AppMode
 import app.securify.core.Geo
+import app.securify.core.Prefs
 import app.securify.core.Store
 import app.securify.core.TUN_MTU
 import app.securify.core.Traffic
 import app.securify.core.VpnState
 import app.securify.core.buildConfig
 import app.securify.ui.MainActivity
+import app.securify.ui.bytes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +39,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import libv2ray.CoreCallbackHandler
 import libv2ray.CoreController
@@ -140,14 +144,25 @@ class SecurifyVpn : VpnService() {
             core = c
             tun = fd
             filesDir.listFiles { f -> f.name.startsWith("ipcheck") && !f.name.startsWith(sock.name) }?.forEach { it.delete() }
+            val sub = st.subs.firstOrNull { s -> s.auto?.key == server.key || s.servers.any { it.key == server.key } }
+            val subName = sub?.title?.ifEmpty { getString(R.string.manual_group) }.orEmpty()
             val since = System.currentTimeMillis()
             state.value = VpnState.On(server.name, since)
-            foreground(getString(R.string.notif_connected, server.name), since)
+            startForegroundCompat(connectedNotification(server.name, subName, since, Traffic(), st.prefs))
             coroutineScope {
                 launch { exit.value = lookupExit(sock) ?: getString(R.string.exit_unknown) }
                 launch { watchLink(c, st.prefs.pingUrl) }
                 launch { watchNetwork() }
-                pollTraffic(c)
+                launch {
+                    Store.state.map { listOf(it.prefs.notifServer, it.prefs.notifSub, it.prefs.notifSpeed, it.prefs.notifTraffic, it.prefs.notifTime) }
+                        .distinctUntilChanged()
+                        .collect {
+                            if (state.value is VpnState.On) {
+                                notifyConnected(server.name, subName, since, traffic.value, Store.state.value.prefs)
+                            }
+                        }
+                }
+                pollTraffic(c, server.name, subName, since)
             }
         } catch (e: Exception) {
             if (core !== newCore) {
@@ -213,7 +228,7 @@ class SecurifyVpn : VpnService() {
         start(this)
     }
 
-    private suspend fun pollTraffic(c: CoreController) {
+    private suspend fun pollTraffic(c: CoreController, serverName: String, subName: String, since: Long) {
         var t = Traffic()
         traffic.value = t
         while (true) {
@@ -229,6 +244,8 @@ class SecurifyVpn : VpnService() {
             }
             t = Traffic(up, down, t.upTotal + up, t.downTotal + down)
             traffic.value = t
+            val p = Store.state.value.prefs
+            if (p.notifSpeed || p.notifTraffic) notifyConnected(serverName, subName, since, t, p)
         }
     }
 
@@ -289,7 +306,7 @@ class SecurifyVpn : VpnService() {
         this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
     )
 
-    private fun foreground(text: String, since: Long = 0L) {
+    private fun ensureChannel(): NotificationManager {
         val nm = getSystemService(NotificationManager::class.java)
         nm.deleteNotificationChannel(LEGACY_CHANNEL)
         // DEFAULT importance with sound/vibration disabled lets Android 16 Live Updates and
@@ -301,12 +318,16 @@ class SecurifyVpn : VpnService() {
                 setShowBadge(false)
             },
         )
+        return nm
+    }
+
+    private fun baseBuilder(title: String, text: String): Notification.Builder {
         val stop = PendingIntent.getService(
             this, 1, Intent(this, SecurifyVpn::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE,
         )
         val nb = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_shield)
-            .setContentTitle(getString(R.string.app_name))
+            .setContentTitle(title)
             .setContentText(text)
             .setCategory(Notification.CATEGORY_SERVICE)
             .setOngoing(true)
@@ -314,17 +335,42 @@ class SecurifyVpn : VpnService() {
             .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setContentIntent(openApp())
             .addAction(Notification.Action.Builder(null, getString(R.string.action_disconnect), stop).build())
-        if (since > 0L) {
-            nb.setWhen(since).setShowWhen(true).setUsesChronometer(true)
-        } else {
-            nb.setShowWhen(false)
-            if (Build.VERSION.SDK_INT >= 36) nb.setShortCriticalText(getString(R.string.notif_short_connecting))
-        }
         if (Build.VERSION.SDK_INT >= 36) {
             nb.addExtras(Bundle().apply { putBoolean(EXTRA_REQUEST_PROMOTED_ONGOING, true) })
         }
-        val n = nb.build()
+        return nb
+    }
+
+    private fun connectedNotification(serverName: String, subName: String, since: Long, t: Traffic, p: Prefs): Notification {
+        val title = if (p.notifServer) serverName else getString(R.string.app_name)
+        val speed = if (p.notifSpeed) "↑ ${getString(R.string.speed, bytes(t.up))}  ↓ ${getString(R.string.speed, bytes(t.down))}" else null
+        val used = if (p.notifTraffic) "${getString(R.string.traffic_used)} ↑ ${bytes(t.upTotal)}  ↓ ${bytes(t.downTotal)}" else null
+        val lines = listOfNotNull(speed, used)
+        val nb = baseBuilder(title, lines.firstOrNull() ?: getString(R.string.status_on))
+        if (p.notifSub && subName.isNotEmpty()) nb.setSubText(subName)
+        if (lines.size > 1) nb.setStyle(Notification.BigTextStyle().bigText(lines.joinToString("\n")))
+        if (p.notifTime) {
+            nb.setWhen(since).setShowWhen(true).setUsesChronometer(true)
+        } else {
+            nb.setShowWhen(false)
+            if (Build.VERSION.SDK_INT >= 36) nb.setShortCriticalText(getString(R.string.notif_short_on))
+        }
+        return nb.build()
+    }
+
+    private fun notifyConnected(serverName: String, subName: String, since: Long, t: Traffic, p: Prefs) {
+        getSystemService(NotificationManager::class.java).notify(NOTIF_ID, connectedNotification(serverName, subName, since, t, p))
+    }
+
+    private fun startForegroundCompat(n: Notification) {
+        ensureChannel()
         if (Build.VERSION.SDK_INT >= 34) startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         else startForeground(NOTIF_ID, n)
+    }
+
+    private fun foreground(text: String) {
+        val nb = baseBuilder(getString(R.string.app_name), text).setShowWhen(false)
+        if (Build.VERSION.SDK_INT >= 36) nb.setShortCriticalText(getString(R.string.notif_short_connecting))
+        startForegroundCompat(nb.build())
     }
 }

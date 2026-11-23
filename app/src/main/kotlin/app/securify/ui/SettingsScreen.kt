@@ -168,6 +168,41 @@ fun SettingsScreen(modifier: Modifier, onApps: () -> Unit, onRules: () -> Unit, 
                         summary = stringResource(R.string.always_on_hint),
                         onClick = { runCatching { ctx.startActivity(Intent(Settings.ACTION_VPN_SETTINGS)) } },
                     )
+                }
+            }
+
+            item { SectionTitle(stringResource(R.string.sec_notification)) }
+            item {
+                PrefGroup {
+                    SwitchPreference(
+                        checked = p.notifServer,
+                        onCheckedChange = { v -> Store.prefs { it.copy(notifServer = v) } },
+                        title = stringResource(R.string.notif_server),
+                    )
+                    RowDivider()
+                    SwitchPreference(
+                        checked = p.notifSub,
+                        onCheckedChange = { v -> Store.prefs { it.copy(notifSub = v) } },
+                        title = stringResource(R.string.notif_sub),
+                    )
+                    RowDivider()
+                    SwitchPreference(
+                        checked = p.notifSpeed,
+                        onCheckedChange = { v -> Store.prefs { it.copy(notifSpeed = v) } },
+                        title = stringResource(R.string.notif_speed),
+                    )
+                    RowDivider()
+                    SwitchPreference(
+                        checked = p.notifTraffic,
+                        onCheckedChange = { v -> Store.prefs { it.copy(notifTraffic = v) } },
+                        title = stringResource(R.string.notif_traffic),
+                    )
+                    RowDivider()
+                    SwitchPreference(
+                        checked = p.notifTime,
+                        onCheckedChange = { v -> Store.prefs { it.copy(notifTime = v) } },
+                        title = stringResource(R.string.notif_time),
+                    )
                     if (Build.VERSION.SDK_INT >= 36) {
                         RowDivider()
                         LiveUpdatesRow()

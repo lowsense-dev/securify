@@ -85,6 +85,11 @@ data class Prefs(
     val agent: SubAgent = SubAgent.SECURIFY,
     val geo: GeoSource = GeoSource.BUNDLED,
     val geoUpdated: Long = 0,
+    val notifServer: Boolean = true,
+    val notifSub: Boolean = true,
+    val notifSpeed: Boolean = true,
+    val notifTraffic: Boolean = true,
+    val notifTime: Boolean = true,
 )
 
 data class AppState(val subs: List<Sub> = emptyList(), val prefs: Prefs = Prefs()) {
@@ -156,6 +161,9 @@ fun encode(s: AppState): JSONObject = JSONObject()
             .put("fragment", it.fragment).put("proxyRules", it.proxyRules).put("directRules", it.directRules)
             .put("blockRules", it.blockRules).put("dns", it.dns).put("fakeDns", it.fakeDns).put("agent", it.agent.name)
             .put("geo", it.geo.name).put("geoUpdated", it.geoUpdated)
+            .put("notifServer", it.notifServer).put("notifSub", it.notifSub)
+            .put("notifSpeed", it.notifSpeed).put("notifTraffic", it.notifTraffic)
+            .put("notifTime", it.notifTime)
     })
 
 fun decode(j: JSONObject): AppState {
@@ -201,6 +209,11 @@ fun decode(j: JSONObject): AppState {
         agent = runCatching { SubAgent.valueOf(p.getString("agent")) }.getOrDefault(d.agent),
         geo = runCatching { GeoSource.valueOf(p.getString("geo")) }.getOrDefault(d.geo),
         geoUpdated = p.optLong("geoUpdated", d.geoUpdated),
+        notifServer = p.optBoolean("notifServer", d.notifServer),
+        notifSub = p.optBoolean("notifSub", d.notifSub),
+        notifSpeed = p.optBoolean("notifSpeed", d.notifSpeed),
+        notifTraffic = p.optBoolean("notifTraffic", d.notifTraffic),
+        notifTime = p.optBoolean("notifTime", d.notifTime),
     )
     return AppState(subs, prefs)
 }

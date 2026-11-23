@@ -19,6 +19,13 @@
     <string name="notif_channel">VPN status</string>
     <string name="notif_connected">Connected to %1$s</string>
     <string name="notif_short_connecting">VPN…</string>
+    <string name="notif_short_on">VPN</string>
+    <string name="sec_notification">Notification</string>
+    <string name="notif_server">Server name</string>
+    <string name="notif_sub">Subscription name</string>
+    <string name="notif_speed">Live speed</string>
+    <string name="notif_traffic">Used traffic</string>
+    <string name="notif_time">Connection time</string>
     <string name="live_updates">Live updates</string>
     <string name="live_updates_on">Shown in the status bar and Live Alerts</string>
     <string name="live_updates_off">Allow Live updates in system settings to show the timer in the status bar and Live Alerts</string>
